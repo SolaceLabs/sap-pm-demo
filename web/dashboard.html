@@ -435,7 +435,7 @@
     }
     
     .stage-item.blink-highlight {
-      animation: blinkHighlight 0.4s ease-in-out 5;
+      animation: blinkHighlight 0.4s ease-in-out 5, lingerHighlight 5s ease-out 2s 1 forwards;
       border-radius: 12px;
       margin: -8px;
       padding: 8px;
@@ -443,6 +443,11 @@
     
     .stage-item.blink-highlight .stage-icon {
       animation: blinkIcon 0.4s ease-in-out 5 !important;
+    }
+
+    @keyframes lingerHighlight {
+      0% { background: rgba(10, 110, 209, 0.25); }
+      100% { background: rgba(10, 110, 209, 0); }
     }
     
     /* Different colors for different event types */
@@ -1004,6 +1009,249 @@
       background: #d1d5db;
       border-radius: 2px;
     }
+
+    /* ============================================================
+       DEMO CONTROLS PANEL
+       ============================================================ */
+    .demo-controls {
+      background: linear-gradient(135deg, #0a6ed1 0%, #0854a0 100%);
+      color: white;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 16px rgba(10, 110, 209, 0.25);
+    }
+
+    .demo-controls-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .demo-controls-title {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .demo-status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .demo-status-badge .status-pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .demo-status-badge.active .status-pulse {
+      background: #4ade80;
+      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+      animation: pulseDot 2s infinite;
+    }
+
+    .demo-status-badge.anomaly .status-pulse {
+      background: #fbbf24;
+      box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7);
+      animation: pulseDot 1s infinite;
+    }
+
+    @keyframes pulseDot {
+      0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(74, 222, 128, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+    }
+
+    .demo-timer {
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.85;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .demo-buttons {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .demo-btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 140px;
+      justify-content: center;
+    }
+
+    .demo-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .demo-btn-start {
+      background: #4ade80;
+      color: #064e3b;
+    }
+
+    .demo-btn-start:hover:not(:disabled) {
+      background: #22c55e;
+      transform: translateY(-1px);
+    }
+
+    .demo-btn-stop {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .demo-btn-stop:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.25);
+    }
+
+    .demo-btn-anomaly {
+      background: #fbbf24;
+      color: #78350f;
+    }
+
+    .demo-btn-anomaly:hover:not(:disabled) {
+      background: #f59e0b;
+      transform: translateY(-1px);
+    }
+
+    .demo-btn-reset {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .demo-btn-reset:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.2);
+    }
+
+    /* Warning banner at 28-min mark */
+    .demo-warning-banner {
+      background: #fef3c7;
+      color: #78350f;
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-size: 14px;
+      display: none;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .demo-warning-banner.show {
+      display: flex;
+    }
+
+    .demo-warning-banner button {
+      margin-left: auto;
+      background: #f59e0b;
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ============================================================
+       IDLE MODAL OVERLAY
+       ============================================================ */
+    .idle-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .idle-modal-overlay.show {
+      display: flex;
+    }
+
+    .idle-modal {
+      background: white;
+      border-radius: 16px;
+      padding: 40px 48px;
+      max-width: 520px;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+    }
+
+    .idle-modal-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+    }
+
+    .idle-modal-title {
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    .idle-modal-message {
+      font-size: 15px;
+      color: #475569;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .idle-modal-reason {
+      background: #f1f5f9;
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #475569;
+      margin-bottom: 24px;
+      border-left: 4px solid #0a6ed1;
+      text-align: left;
+    }
+
+    .idle-modal-start-btn {
+      background: #4ade80;
+      color: #064e3b;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .idle-modal-start-btn:hover {
+      background: #22c55e;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(34, 197, 94, 0.4);
+    }
   </style>
 </head>
 <body>
@@ -1059,6 +1307,40 @@
           <button class="btn btn-success" id="connect-btn" onclick="connect()">Connect</button>
           <button class="btn btn-danger" id="disconnect-btn" onclick="disconnect()" style="display: none;">Disconnect</button>
         </div>
+      </div>
+    </div>
+
+    <!-- Demo Controls Panel -->
+    <div class="demo-controls" id="demo-controls">
+      <div class="demo-controls-header">
+        <div class="demo-controls-title">
+          🎬 Demo Controls
+          <span class="demo-status-badge" id="demo-status-badge">
+            <span class="status-pulse"></span>
+            <span id="demo-status-text">STOPPED</span>
+          </span>
+        </div>
+        <div class="demo-timer" id="demo-timer" style="display: none;">
+          ⏱️ Time left: <span id="demo-timer-value">30:00</span>
+        </div>
+      </div>
+      <div class="demo-buttons">
+        <button class="demo-btn demo-btn-start" id="btn-start-demo" onclick="startDemo()">
+          ▶ Start Demo
+        </button>
+        <button class="demo-btn demo-btn-anomaly" id="btn-trigger-anomaly" onclick="triggerAnomaly()" disabled>
+          ⚡ Trigger Anomaly
+        </button>
+        <button class="demo-btn demo-btn-stop" id="btn-stop-demo" onclick="stopDemo()" disabled>
+          ⏹ Stop Demo
+        </button>
+        <button class="demo-btn demo-btn-reset" id="btn-reset-demo" onclick="resetDemo()">
+          🔄 Reset
+        </button>
+      </div>
+      <div class="demo-warning-banner" id="demo-warning-banner">
+        ⚠️ Demo will auto-reset in 2 minutes. 
+        <button onclick="extendDemo()">Extend 30 min</button>
       </div>
     </div>
 
@@ -1339,7 +1621,8 @@
       'factory/line-A/*/notification/pending', // PM Notifications from agent
       'factory/line-A/*/notification/approved',// Approvals from BPA
       'factory/line-A/*/notification/rejected',// Rejections from BPA
-      'factory/line-A/*/workorder/created'     // Work orders from agent
+      'factory/line-A/*/workorder/created',    // Work orders from agent
+      'factory/line-A/control/demo/state'      // Demo state broadcasts from simulator
     ];
 
     // ============================================================
@@ -1384,6 +1667,19 @@
       }
       if (CONFIG.SOLACE_PASSWORD && !CONFIG.SOLACE_PASSWORD.includes('YOUR_')) {
         document.getElementById('solace-password').value = CONFIG.SOLACE_PASSWORD;
+      }
+
+      // Initialize demo UI in STOPPED state and show idle modal
+      // (the SE must click Start Demo to begin)
+      if (typeof updateDemoUI === 'function') {
+        updateDemoUI();
+      }
+      if (typeof showIdleModal === 'function') {
+        showIdleModal(
+          'Welcome to the Demo',
+          'Click <strong>Start Demo</strong> to begin the predictive maintenance scenario.',
+          null
+        );
       }
     });
 
@@ -1458,6 +1754,263 @@
       }
     }
 
+    // ============================================================
+    // DEMO CONTROLS (Phase 1)
+    // ============================================================
+    const DEMO_DURATION_MS = 30 * 60 * 1000;   // 30 minutes
+    const DEMO_WARNING_MS  = 28 * 60 * 1000;   // warn at 28 min
+    
+    const demoState = {
+      status: 'STOPPED',      // STOPPED | ACTIVE | ANOMALY_ACTIVE
+      sessionId: null,
+      startedAt: null,
+      timerInterval: null,
+      warningShown: false,
+      autoResetTimeout: null,
+      warningTimeout: null
+    };
+
+    function publishControlEvent(category, action, extraData = {}) {
+      if (!session) {
+        log('error', 'Cannot send control event - not connected to AEM');
+        return false;
+      }
+      const topic = `factory/line-A/control/${category}/${action}`;
+      const payload = {
+        specversion: '1.0',
+        type: `com.factory.control.${category}.${action}.v1`,
+        source: 'urn:com:factory:line-A:dashboard',
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        time: new Date().toISOString(),
+        datacontenttype: 'application/json',
+        data: {
+          session_id: demoState.sessionId,
+          ...extraData
+        }
+      };
+      try {
+        const message = solace.SolclientFactory.createMessage();
+        message.setDestination(solace.SolclientFactory.createTopicDestination(topic));
+        message.setBinaryAttachment(JSON.stringify(payload));
+        message.setDeliveryMode(solace.MessageDeliveryModeType.PERSISTENT);
+        session.send(message);
+        log('info', `📤 Sent: ${category}/${action}`);
+        return true;
+      } catch (error) {
+        log('error', `Failed to send control event: ${error.message}`);
+        return false;
+      }
+    }
+
+    function startDemo() {
+      // Generate session ID
+      demoState.sessionId = (crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : String(Date.now()).slice(-8));
+      demoState.status = 'ACTIVE';
+      demoState.startedAt = Date.now();
+      demoState.warningShown = false;
+
+      // Notify backend
+      publishControlEvent('demo', 'start', { session_id: demoState.sessionId });
+
+      // Update UI
+      updateDemoUI();
+      hideIdleModal();
+      startDemoTimer();
+
+      log('success', `▶ Demo started (session ${demoState.sessionId})`);
+    }
+
+    function startDemoFromModal() {
+      startDemo();
+    }
+
+    function triggerAnomaly() {
+      if (demoState.status === 'STOPPED') {
+        log('warn', 'Start the demo first before triggering anomaly');
+        return;
+      }
+      publishControlEvent('anomaly', 'trigger', {});
+      demoState.status = 'ANOMALY_ACTIVE';
+      updateDemoUI();
+      log('success', '⚡ Anomaly triggered on machine-02');
+    }
+
+    function stopDemo() {
+      publishControlEvent('demo', 'stop', {});
+      demoState.status = 'STOPPED';
+      demoState.sessionId = null;
+      demoState.startedAt = null;
+      stopDemoTimer();
+      updateDemoUI();
+      showIdleModal('Demo Stopped', 'You stopped the demo. Click Start to begin a new session.', null);
+      log('info', '⏹ Demo stopped');
+    }
+
+    function resetDemo() {
+      publishControlEvent('demo', 'reset', { reason: 'manual' });
+      demoState.status = 'STOPPED';
+      demoState.sessionId = null;
+      demoState.startedAt = null;
+      stopDemoTimer();
+      clearDashboardState();
+      updateDemoUI();
+      showIdleModal('Demo Reset', 'The demo has been reset to a clean state. Click Start to begin a new session.', null);
+      log('info', '🔄 Demo reset (state cleared)');
+    }
+
+    function extendDemo() {
+      // Reset the timer countdown by adjusting startedAt
+      demoState.startedAt = Date.now();
+      demoState.warningShown = false;
+      document.getElementById('demo-warning-banner').classList.remove('show');
+      stopDemoTimer();
+      startDemoTimer();
+      log('info', '⏱️ Demo extended by 30 minutes');
+    }
+
+    function clearDashboardState() {
+      // Clear stats
+      stats = { sensors: 0, notifications: 0, approved: 0, rejected: 0, workorders: 0 };
+      ['stat-sensors', 'stat-notifications', 'stat-approved', 'stat-rejected', 'stat-workorders'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = '0';
+      });
+      // Clear event feed if function exists
+      try { if (typeof clearEvents === 'function') clearEvents(); } catch (e) {}
+      // Reset stage timeline
+      try {
+        document.querySelectorAll('.stage-item').forEach(el => {
+          el.classList.remove('active', 'blink-highlight', 'blink-notification', 'blink-approval', 'blink-workorder');
+        });
+      } catch (e) {}
+    }
+
+    function startDemoTimer() {
+      // Tick every second to update countdown display
+      demoState.timerInterval = setInterval(updateTimerDisplay, 1000);
+      updateTimerDisplay();
+
+      // Schedule warning
+      demoState.warningTimeout = setTimeout(() => {
+        if (demoState.status !== 'STOPPED') {
+          document.getElementById('demo-warning-banner').classList.add('show');
+          demoState.warningShown = true;
+          log('warn', '⚠️ Demo will auto-reset in 2 minutes');
+        }
+      }, DEMO_WARNING_MS);
+
+      // Schedule auto-reset
+      demoState.autoResetTimeout = setTimeout(() => {
+        if (demoState.status !== 'STOPPED') {
+          handleAutoReset();
+        }
+      }, DEMO_DURATION_MS);
+    }
+
+    function stopDemoTimer() {
+      if (demoState.timerInterval) {
+        clearInterval(demoState.timerInterval);
+        demoState.timerInterval = null;
+      }
+      if (demoState.warningTimeout) {
+        clearTimeout(demoState.warningTimeout);
+        demoState.warningTimeout = null;
+      }
+      if (demoState.autoResetTimeout) {
+        clearTimeout(demoState.autoResetTimeout);
+        demoState.autoResetTimeout = null;
+      }
+      document.getElementById('demo-timer').style.display = 'none';
+      document.getElementById('demo-warning-banner').classList.remove('show');
+    }
+
+    function updateTimerDisplay() {
+      if (!demoState.startedAt) return;
+      const elapsed = Date.now() - demoState.startedAt;
+      const remaining = Math.max(0, DEMO_DURATION_MS - elapsed);
+      const minutes = Math.floor(remaining / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      const display = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+      const timerEl = document.getElementById('demo-timer');
+      const valueEl = document.getElementById('demo-timer-value');
+      if (timerEl && valueEl) {
+        timerEl.style.display = 'inline-block';
+        valueEl.textContent = display;
+      }
+    }
+
+    function handleAutoReset() {
+      log('warn', '🛑 Demo auto-reset after 30 minutes');
+      publishControlEvent('demo', 'reset', { reason: 'auto_30min' });
+      demoState.status = 'STOPPED';
+      demoState.sessionId = null;
+      demoState.startedAt = null;
+      stopDemoTimer();
+      clearDashboardState();
+      updateDemoUI();
+      showIdleModal(
+        'Demo Auto-Reset',
+        'The demo has automatically reset after 30 minutes of activity.',
+        'If you want to continue demonstrating, click Start Demo to begin a fresh session.'
+      );
+    }
+
+    function updateDemoUI() {
+      const badge = document.getElementById('demo-status-badge');
+      const text = document.getElementById('demo-status-text');
+      const startBtn = document.getElementById('btn-start-demo');
+      const stopBtn = document.getElementById('btn-stop-demo');
+      const anomalyBtn = document.getElementById('btn-trigger-anomaly');
+
+      // Reset badge classes
+      badge.classList.remove('active', 'anomaly');
+
+      if (demoState.status === 'STOPPED') {
+        text.textContent = 'STOPPED';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        anomalyBtn.disabled = true;
+      } else if (demoState.status === 'ACTIVE') {
+        text.textContent = 'ACTIVE';
+        badge.classList.add('active');
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        anomalyBtn.disabled = false;
+      } else if (demoState.status === 'ANOMALY_ACTIVE') {
+        text.textContent = 'ANOMALY ACTIVE';
+        badge.classList.add('anomaly');
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        anomalyBtn.disabled = true;
+      }
+    }
+
+    function showIdleModal(title, message, reason) {
+      document.getElementById('idle-modal-title').textContent = title;
+      document.getElementById('idle-modal-message').innerHTML = message;
+      const reasonEl = document.getElementById('idle-modal-reason');
+      if (reason) {
+        reasonEl.textContent = reason;
+        reasonEl.style.display = 'block';
+      } else {
+        reasonEl.style.display = 'none';
+      }
+      document.getElementById('idle-modal-overlay').classList.add('show');
+    }
+
+    function hideIdleModal() {
+      document.getElementById('idle-modal-overlay').classList.remove('show');
+    }
+
+    // Handle state events from simulator
+    function handleDemoStateEvent(payload) {
+      const status = payload.status;
+      const message = payload.message;
+      log('info', `📡 State sync: ${status} - ${message}`);
+      // Note: we don't blindly trust simulator's state for UI - dashboard
+      // is the source of truth for demo session. But we log it for visibility.
+    }
+
     function subscribeToTopics() {
       TOPICS.forEach(topic => {
         try {
@@ -1492,6 +2045,13 @@
       // Determine event type from topic
       let eventType = 'sensor';
       let details = '';
+
+      if (topic.includes('/control/demo/state')) {
+        // Sync simulator state with dashboard — informational only
+        handleDemoStateEvent(payload);
+        log('info', `Received demo state event on ${topic}`);
+        return;
+      }
 
       if (topic.includes('/sensors')) {
         eventType = 'sensor';
@@ -1787,5 +2347,20 @@
       }
     });
   </script>
+
+  <!-- Idle Modal Overlay -->
+  <div class="idle-modal-overlay" id="idle-modal-overlay">
+    <div class="idle-modal">
+      <div class="idle-modal-icon" id="idle-modal-icon">⏸️</div>
+      <div class="idle-modal-title" id="idle-modal-title">Demo Idle</div>
+      <div class="idle-modal-message" id="idle-modal-message">
+        Click <strong>Start Demo</strong> to begin the predictive maintenance scenario.
+      </div>
+      <div class="idle-modal-reason" id="idle-modal-reason" style="display: none;"></div>
+      <button class="idle-modal-start-btn" onclick="startDemoFromModal()">
+        ▶ Start Demo
+      </button>
+    </div>
+  </div>
 </body>
 </html>

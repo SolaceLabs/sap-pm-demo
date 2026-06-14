@@ -1,0 +1,101 @@
+# ============================================================
+# CRITICAL: Never commit these
+# ============================================================
+
+# Environment variables / secrets
+.env
+.env.local
+.env.*.local
+*.env
+
+# Key files (NEVER commit any file with extension .key, .pem, .p12, .pfx)
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+secrets/
+credentials/
+
+# ============================================================
+# Python
+# ============================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# uv / poetry / pipenv lockfiles (we use requirements.txt)
+uv.lock
+poetry.lock
+Pipfile.lock
+
+# ============================================================
+# Logs and runtime
+# ============================================================
+*.log
+logs/
+*.log.*
+maintenance_agent.log
+mcp_server.log
+
+# ============================================================
+# IDE / Editor
+# ============================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.pydevproject
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# ============================================================
+# Project-specific
+# ============================================================
+# Old / experimental files we explicitly excluded
+server-new.py
+main.py
+agent-architecture
+connect-claude-desktop.sh
+
+# Local test outputs
+test_output/
+demo_recordings/

@@ -1,0 +1,316 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "PM Notification Approval API",
+    "description": "API for SAP Build BPA to publish PM Notification approval or rejection events to SAP Advanced Event Mesh (AEM) via REST. Use this action in your BPA workflow to notify the maintenance agent of the approval decision.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://{host}:{port}",
+      "description": "SAP Advanced Event Mesh REST endpoint",
+      "variables": {
+        "host": {
+          "default": "your-aem-host.messaging.solace.cloud",
+          "description": "AEM REST host"
+        },
+        "port": {
+          "default": "9443",
+          "description": "AEM REST port"
+        }
+      }
+    }
+  ],
+  "paths": {
+    "/factory/line-A/{machineId}/notification/approved": {
+      "post": {
+        "operationId": "publishNotificationApproved",
+        "summary": "Publish PM Notification Approved Event",
+        "description": "Publish an approval event to AEM when a PM Notification is approved in BPA workflow. The maintenance agent will receive this event and create a PM Work Order.",
+        "tags": ["PM Notification"],
+        "parameters": [
+          {
+            "name": "machineId",
+            "in": "path",
+            "required": true,
+            "description": "The machine/equipment ID (e.g., machine-01, machine-02, machine-03)",
+            "schema": {
+              "type": "string",
+              "example": "machine-02"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Basic Auth credentials (Base64 encoded username:password)",
+            "schema": {
+              "type": "string",
+              "example": "Basic dXNlcm5hbWU6cGFzc3dvcmQ="
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "application/json"
+            }
+          },
+          {
+            "name": "Solace-Delivery-Mode",
+            "in": "header",
+            "required": false,
+            "description": "Message delivery mode",
+            "schema": {
+              "type": "string",
+              "default": "persistent"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Notification approval details",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationApprovedEvent"
+              },
+              "example": {
+                "notification_id": "10ABCD1234",
+                "machine_id": "machine-02",
+                "status": "approved",
+                "approved_by": "john.doe@company.com",
+                "approved_at": "2026-03-26T10:30:00Z",
+                "comments": "Approved for immediate maintenance action",
+                "work_order_priority": "1"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event published successfully"
+          },
+          "400": {
+            "description": "Bad request - invalid payload"
+          },
+          "401": {
+            "description": "Unauthorized - invalid credentials"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    },
+    "/factory/line-A/{machineId}/notification/rejected": {
+      "post": {
+        "operationId": "publishNotificationRejected",
+        "summary": "Publish PM Notification Rejected Event",
+        "description": "Publish a rejection event to AEM when a PM Notification is rejected in BPA workflow. The maintenance agent will receive this event and log the rejection.",
+        "tags": ["PM Notification"],
+        "parameters": [
+          {
+            "name": "machineId",
+            "in": "path",
+            "required": true,
+            "description": "The machine/equipment ID (e.g., machine-01, machine-02, machine-03)",
+            "schema": {
+              "type": "string",
+              "example": "machine-02"
+            }
+          },
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": true,
+            "description": "Basic Auth credentials (Base64 encoded username:password)",
+            "schema": {
+              "type": "string",
+              "example": "Basic dXNlcm5hbWU6cGFzc3dvcmQ="
+            }
+          },
+          {
+            "name": "Content-Type",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "default": "application/json"
+            }
+          },
+          {
+            "name": "Solace-Delivery-Mode",
+            "in": "header",
+            "required": false,
+            "description": "Message delivery mode",
+            "schema": {
+              "type": "string",
+              "default": "persistent"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Notification rejection details",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationRejectedEvent"
+              },
+              "example": {
+                "notification_id": "10ABCD1234",
+                "machine_id": "machine-02",
+                "status": "rejected",
+                "rejected_by": "jane.smith@company.com",
+                "rejected_at": "2026-03-26T10:30:00Z",
+                "reason": "Sensor readings have stabilized. Continue monitoring.",
+                "resubmit_allowed": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Event published successfully"
+          },
+          "400": {
+            "description": "Bad request - invalid payload"
+          },
+          "401": {
+            "description": "Unauthorized - invalid credentials"
+          },
+          "500": {
+            "description": "Server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "NotificationApprovedEvent": {
+        "type": "object",
+        "required": [
+          "notification_id",
+          "machine_id",
+          "status",
+          "approved_by",
+          "approved_at"
+        ],
+        "properties": {
+          "notification_id": {
+            "type": "string",
+            "maxLength": 12,
+            "description": "The PM Notification ID being approved",
+            "example": "10ABCD1234"
+          },
+          "machine_id": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "Equipment/machine ID",
+            "example": "machine-02"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["approved"],
+            "description": "Approval status - must be 'approved'",
+            "example": "approved"
+          },
+          "approved_by": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "User ID or email of the approver",
+            "example": "john.doe@company.com"
+          },
+          "approved_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of approval in ISO 8601 format",
+            "example": "2026-03-26T10:30:00Z"
+          },
+          "comments": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Optional approver comments",
+            "example": "Approved for immediate maintenance action"
+          },
+          "work_order_priority": {
+            "type": "string",
+            "maxLength": 1,
+            "description": "Optional priority override for work order (1=Very High, 2=High, 3=Medium, 4=Low)",
+            "example": "1"
+          }
+        }
+      },
+      "NotificationRejectedEvent": {
+        "type": "object",
+        "required": [
+          "notification_id",
+          "machine_id",
+          "status",
+          "rejected_by",
+          "rejected_at",
+          "reason"
+        ],
+        "properties": {
+          "notification_id": {
+            "type": "string",
+            "maxLength": 12,
+            "description": "The PM Notification ID being rejected",
+            "example": "10ABCD1234"
+          },
+          "machine_id": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "Equipment/machine ID",
+            "example": "machine-02"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["rejected"],
+            "description": "Rejection status - must be 'rejected'",
+            "example": "rejected"
+          },
+          "rejected_by": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "User ID or email of the reviewer",
+            "example": "jane.smith@company.com"
+          },
+          "rejected_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of rejection in ISO 8601 format",
+            "example": "2026-03-26T10:30:00Z"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "description": "Reason for rejection",
+            "example": "Sensor readings have stabilized. Continue monitoring."
+          },
+          "resubmit_allowed": {
+            "type": "boolean",
+            "description": "Whether agent can create a new notification if condition persists",
+            "example": true
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "basicAuth": {
+        "type": "http",
+        "scheme": "basic",
+        "description": "AEM REST API authentication"
+      }
+    }
+  },
+  "security": [
+    {
+      "basicAuth": []
+    }
+  ]
+}

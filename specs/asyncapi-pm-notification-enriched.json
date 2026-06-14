@@ -1,0 +1,429 @@
+{
+  "asyncapi": "2.0.0",
+  "info": {
+    "title": "PM Notification Enriched - Agent Mesh Briefing",
+    "version": "1.0",
+    "description": "This event is published by the Solace Agent Mesh after enriching a PM Notification with cross-functional intelligence. The notification arrives at BPA with a complete decision package: maintenance diagnosis, SAP MM parts availability, SAP HR technician assignment, and SAP CO financial impact. The BPA approver makes an informed decision in seconds rather than gathering data from multiple SAP modules manually."
+  },
+  "x-api-type": "EVENT",
+  "x-shortText": "Notifies BPA when a PM Notification has been enriched with agent mesh decision briefing.",
+  "x-stateInfo": { "state": "ACTIVE" },
+  "channels": {
+    "factory/line-A/{machineId}/notification/enriched": {
+      "parameters": {
+        "machineId": {
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "subscribe": {
+        "message": {
+          "$ref": "#/components/messages/PM_NOTIFICATION_ENRICHED_V1"
+        }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "PM_NOTIFICATION_ENRICHED_V1": {
+        "name": "com.factory.pm.notification.enriched.v1",
+        "summary": "CloudEvent - PM Notification Enriched with Agent Mesh Briefing",
+        "description": "PM Notification enriched with cross-functional decision support from the agent mesh: maintenance diagnosis, parts availability (SAP MM), technician assignment (SAP HR), and financial impact analysis (SAP CO).",
+        "headers": {
+          "properties": {
+            "datacontenttype": {
+              "const": "application/json"
+            },
+            "type": {
+              "const": "com.factory.pm.notification.enriched.v1"
+            }
+          }
+        },
+        "payload": {
+          "$ref": "#/components/schemas/pmNotificationEnriched"
+        },
+        "traits": [{ "$ref": "#/components/messageTraits/CloudEventContext" }]
+      }
+    },
+    "schemas": {
+      "pmNotificationEnriched": {
+        "type": "object",
+        "description": "Enriched PM Notification with full agent mesh briefing for the approver.",
+        "properties": {
+          "notification_id": {
+            "type": "string",
+            "maxLength": 12,
+            "description": "SAP PM Notification number"
+          },
+          "notification_type": {
+            "type": "string",
+            "maxLength": 2,
+            "description": "M1=Malfunction Report, M2=Maintenance Request, M3=Activity Report"
+          },
+          "equipment_id": {
+            "type": "string",
+            "maxLength": 18,
+            "description": "SAP Equipment number"
+          },
+          "functional_location": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "SAP Functional Location in plant hierarchy"
+          },
+          "priority": {
+            "type": "string",
+            "maxLength": 1,
+            "description": "1=Very High, 2=High, 3=Medium, 4=Low"
+          },
+          "short_text": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "Notification short text"
+          },
+          "long_text": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Detailed description of the malfunction"
+          },
+          "effect_code": {
+            "type": "string",
+            "maxLength": 1,
+            "description": "1=No breakdown, 2=Partial, 3=Full, 4=Safety risk"
+          },
+          "reported_by": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "Reporter ID"
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "Notification status (PENDING_APPROVAL after enrichment)"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Original notification creation timestamp"
+          },
+          "plant": {
+            "type": "string",
+            "maxLength": 4,
+            "description": "SAP Plant code"
+          },
+          "planning_plant": {
+            "type": "string",
+            "maxLength": 4,
+            "description": "SAP Planning Plant code"
+          },
+
+          "agent_briefing": {
+            "type": "object",
+            "description": "Cross-functional decision briefing produced by the agent mesh in parallel after the notification was created.",
+            "properties": {
+
+              "diagnosis": {
+                "type": "object",
+                "description": "Technical diagnosis from the Maintenance Agent.",
+                "properties": {
+                  "root_cause": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Root cause analysis of the malfunction"
+                  },
+                  "damage_code": {
+                    "type": "string",
+                    "maxLength": 4,
+                    "description": "SAP PM damage code (e.g., 0010=Bearing wear, 0020=Overheating)"
+                  },
+                  "cause_code": {
+                    "type": "string",
+                    "maxLength": 4,
+                    "description": "SAP PM cause code"
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "description": "Confidence level: high, medium, low"
+                  },
+                  "time_to_failure_hours": {
+                    "type": "number",
+                    "description": "Estimated hours until catastrophic failure if not addressed"
+                  },
+                  "recommended_action": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Recommended corrective action"
+                  },
+                  "evidence_summary": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Sensor data and trend evidence supporting the diagnosis"
+                  }
+                }
+              },
+
+              "parts_availability": {
+                "type": "object",
+                "description": "Materials Management lookup from the Supply Chain Agent. Maps to SAP MM.",
+                "properties": {
+                  "material_number": {
+                    "type": "string",
+                    "maxLength": 18,
+                    "description": "SAP MM Material Number (replaces former 'part number')"
+                  },
+                  "material_description": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "Material description from material master"
+                  },
+                  "mrp_status": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "MRP status: IN_STOCK, BACKORDER, REORDER_REQUIRED"
+                  },
+                  "stock_quantity": {
+                    "type": "number",
+                    "description": "Available stock quantity"
+                  },
+                  "storage_location": {
+                    "type": "string",
+                    "maxLength": 4,
+                    "description": "SAP MM Storage Location code"
+                  },
+                  "plant_stock": {
+                    "type": "string",
+                    "maxLength": 4,
+                    "description": "SAP Plant where stock is held"
+                  },
+                  "reservation_number": {
+                    "type": "string",
+                    "maxLength": 12,
+                    "description": "SAP MM Reservation Number created by agent for this work order"
+                  },
+                  "unit_cost": {
+                    "type": "number",
+                    "description": "Material standard cost per unit"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "maxLength": 3,
+                    "description": "Currency code (USD, EUR, etc.)"
+                  },
+                  "vendor_lead_time_days": {
+                    "type": "number",
+                    "description": "Standard vendor lead time if reorder needed"
+                  }
+                }
+              },
+
+              "technician_assignment": {
+                "type": "object",
+                "description": "Workforce lookup from the Workforce Agent. Maps to SAP HR / SuccessFactors.",
+                "properties": {
+                  "personnel_number": {
+                    "type": "string",
+                    "maxLength": 8,
+                    "description": "SAP HR Personnel Number"
+                  },
+                  "technician_name": {
+                    "type": "string",
+                    "maxLength": 80,
+                    "description": "Technician full name"
+                  },
+                  "work_center": {
+                    "type": "string",
+                    "maxLength": 8,
+                    "description": "SAP PM Work Center assignment"
+                  },
+                  "qualifications_match": {
+                    "type": "boolean",
+                    "description": "Whether technician qualifications cover the required maintenance"
+                  },
+                  "qualifications_held": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Comma-separated list of relevant qualifications"
+                  },
+                  "estimated_arrival_minutes": {
+                    "type": "number",
+                    "description": "Estimated time for technician to reach equipment location"
+                  },
+                  "prior_work_on_equipment": {
+                    "type": "boolean",
+                    "description": "Whether technician has previously worked on this equipment"
+                  },
+                  "availability_status": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "AVAILABLE_NOW, AVAILABLE_LATER, ON_OTHER_JOB"
+                  },
+                  "alternative_count": {
+                    "type": "number",
+                    "description": "Number of other qualified technicians available as backup"
+                  }
+                }
+              },
+
+              "financial_impact": {
+                "type": "object",
+                "description": "Cost analysis from the Finance Agent. Maps to SAP CO.",
+                "properties": {
+                  "cost_center": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "description": "SAP CO Cost Center where costs will be booked"
+                  },
+                  "internal_order": {
+                    "type": "string",
+                    "maxLength": 12,
+                    "description": "SAP CO Internal Order for tracking maintenance costs"
+                  },
+                  "estimated_parts_cost": {
+                    "type": "number",
+                    "description": "Total parts cost in currency units"
+                  },
+                  "estimated_labor_cost": {
+                    "type": "number",
+                    "description": "Total labor cost in currency units"
+                  },
+                  "estimated_total_cost": {
+                    "type": "number",
+                    "description": "Total cost of immediate action"
+                  },
+                  "currency": {
+                    "type": "string",
+                    "maxLength": 3,
+                    "description": "Currency code"
+                  },
+                  "downtime_cost_per_hour": {
+                    "type": "number",
+                    "description": "Production line downtime cost per hour"
+                  },
+                  "cost_of_inaction_estimate": {
+                    "type": "number",
+                    "description": "Estimated cost if action is delayed (downtime + potential damage)"
+                  },
+                  "risk_adjusted_savings": {
+                    "type": "number",
+                    "description": "Net savings from immediate action vs delayed action"
+                  },
+                  "release_strategy": {
+                    "type": "string",
+                    "maxLength": 10,
+                    "description": "SAP release strategy code governing approval thresholds (e.g., RS_PM_001)"
+                  },
+                  "within_release_strategy_limit": {
+                    "type": "boolean",
+                    "description": "Whether the estimated cost is within the approver's release strategy authority"
+                  },
+                  "budget_availability": {
+                    "type": "string",
+                    "maxLength": 20,
+                    "description": "Budget status: AVAILABLE, NEAR_LIMIT, EXCEEDED"
+                  }
+                }
+              },
+
+              "synthesis": {
+                "type": "object",
+                "description": "Final recommendation synthesized by the Orchestrator Agent from all specialist agents.",
+                "properties": {
+                  "recommendation": {
+                    "type": "string",
+                    "maxLength": 30,
+                    "description": "APPROVE_IMMEDIATE, APPROVE_SCHEDULED, REQUEST_INFO, REJECT"
+                  },
+                  "urgency_score": {
+                    "type": "number",
+                    "description": "Calculated urgency score 0-100"
+                  },
+                  "summary": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Plain-language executive summary for the approver"
+                  },
+                  "key_decision_factors": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "description": "Bullet list of the top 3-5 factors driving the recommendation"
+                  }
+                }
+              },
+
+              "audit": {
+                "type": "object",
+                "description": "Audit trail metadata for compliance and explainability.",
+                "properties": {
+                  "agents_consulted": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "Comma-separated list of agents that contributed to this briefing"
+                  },
+                  "briefing_generated_at": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "Timestamp when the briefing was completed"
+                  },
+                  "briefing_duration_ms": {
+                    "type": "number",
+                    "description": "Total time in milliseconds for the agent mesh to produce this briefing"
+                  },
+                  "orchestrator_task_id": {
+                    "type": "string",
+                    "maxLength": 36,
+                    "description": "Unique task ID from the SAM Orchestrator for full audit trail lookup"
+                  },
+                  "llm_model_used": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "description": "LLM model identifier for explainability"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "required": [
+          "notification_id",
+          "notification_type",
+          "equipment_id",
+          "priority",
+          "short_text",
+          "agent_briefing"
+        ]
+      }
+    },
+    "messageTraits": {
+      "CloudEventContext": {
+        "headers": {
+          "type": "object",
+          "properties": {
+            "specversion": {
+              "type": "string",
+              "enum": ["1.0"]
+            },
+            "type": {
+              "description": "Type of occurrence which has happened. Often this property is used for routing, observability, policy enforcement, etc.",
+              "type": "string",
+              "minLength": 1
+            },
+            "source": { "type": "string" },
+            "subject": { "type": "string" },
+            "id": { "type": "string" },
+            "time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "datacontenttype": {
+              "description": "Describe the data encoding format",
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "required": ["id", "specversion", "source", "type"]
+        }
+      }
+    }
+  }
+}

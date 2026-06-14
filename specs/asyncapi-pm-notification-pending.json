@@ -1,0 +1,160 @@
+{
+  "asyncapi": "2.0.0",
+  "info": {
+    "title": "PM Notification Pending",
+    "version": "1.0",
+    "description": "This event is triggered by the Manufacturing MCP Agent when a maintenance issue is detected and a PM Notification needs approval before creating a Work Order."
+  },
+  "x-api-type": "EVENT",
+  "x-shortText": "Notifies subscribers when a PM Notification requires BPA approval.",
+  "x-stateInfo": { "state": "ACTIVE" },
+  "channels": {
+    "factory/line-A/{machineId}/notification/pending": {
+      "parameters": {
+        "machineId": {
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "subscribe": {
+        "message": {
+          "$ref": "#/components/messages/PM_NOTIFICATION_PENDING_V1"
+        }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "PM_NOTIFICATION_PENDING_V1": {
+        "name": "com.factory.pm.notification.pending.v1",
+        "summary": "CloudEvent - PM Notification Pending Approval",
+        "description": "PM Notification Pending Approval",
+        "headers": {
+          "properties": {
+            "datacontenttype": {
+              "const": "application/json"
+            },
+            "type": {
+              "const": "com.factory.pm.notification.pending.v1"
+            }
+          }
+        },
+        "payload": {
+          "$ref": "#/components/schemas/pmNotification"
+        },
+        "traits": [{ "$ref": "#/components/messageTraits/CloudEventContext" }]
+      }
+    },
+    "schemas": {
+      "pmNotification": {
+        "type": "object",
+        "properties": {
+          "notification_id": {
+            "type": "string",
+            "maxLength": 12,
+            "description": "SAP PM Notification number"
+          },
+          "notification_type": {
+            "type": "string",
+            "maxLength": 2,
+            "description": "M1=Malfunction Report, M2=Maintenance Request, M3=Activity Report"
+          },
+          "equipment_id": {
+            "type": "string",
+            "maxLength": 18,
+            "description": "SAP Equipment number"
+          },
+          "functional_location": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "SAP Functional Location"
+          },
+          "priority": {
+            "type": "string",
+            "maxLength": 1,
+            "description": "1=Very High, 2=High, 3=Medium, 4=Low"
+          },
+          "short_text": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "Notification short text"
+          },
+          "long_text": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Detailed description of the issue"
+          },
+          "effect_code": {
+            "type": "string",
+            "maxLength": 1,
+            "description": "1=No breakdown, 2=Partial, 3=Full, 4=Safety risk"
+          },
+          "reported_by": {
+            "type": "string",
+            "maxLength": 40,
+            "description": "Reporter ID or name"
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 20,
+            "description": "Notification status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Creation timestamp"
+          },
+          "plant": {
+            "type": "string",
+            "maxLength": 4,
+            "description": "SAP Plant code"
+          },
+          "planning_plant": {
+            "type": "string",
+            "maxLength": 4,
+            "description": "SAP Planning Plant code"
+          }
+        },
+        "required": [
+          "notification_id",
+          "notification_type",
+          "equipment_id",
+          "priority",
+          "short_text"
+        ]
+      }
+    },
+    "messageTraits": {
+      "CloudEventContext": {
+        "headers": {
+          "type": "object",
+          "properties": {
+            "specversion": {
+              "type": "string",
+              "enum": ["1.0"]
+            },
+            "type": {
+              "description": "Type of occurrence which has happened. Often this property is used for routing, observability, policy enforcement, etc.",
+              "type": "string",
+              "minLength": 1
+            },
+            "source": { "type": "string" },
+            "subject": { "type": "string" },
+            "id": { "type": "string" },
+            "time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "datacontenttype": {
+              "description": "Describe the data encoding format",
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "required": ["id", "specversion", "source", "type"]
+        }
+      }
+    }
+  }
+}

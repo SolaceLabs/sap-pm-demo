@@ -1,0 +1,127 @@
+{
+  "asyncapi": "2.0.0",
+  "info": {
+    "title": "Factory Workorder Pending",
+    "version": "1.0",
+    "description": "This event is triggered by the Manufacturing MCP Agent when a critical maintenance issue is detected and a work order needs approval."
+  },
+  "x-api-type": "EVENT",
+  "x-shortText": "Notifies subscribers when a maintenance work order requires approval.",
+  "x-stateInfo": { "state": "ACTIVE" },
+  "channels": {
+    "factory/line-A/{machineId}/workorder/pending": {
+      "parameters": {
+        "machineId": {
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "subscribe": {
+        "message": {
+          "$ref": "#/components/messages/WORKORDER_PENDING_V1"
+        }
+      }
+    }
+  },
+  "components": {
+    "messages": {
+      "WORKORDER_PENDING_V1": {
+        "name": "com.factory.workorder.pending.v1",
+        "summary": "CloudEvent - Workorder Pending Approval",
+        "description": "Workorder Pending Approval",
+        "headers": {
+          "properties": {
+            "datacontenttype": {
+              "const": "application/json"
+            },
+            "type": {
+              "const": "com.factory.workorder.pending.v1"
+            }
+          }
+        },
+        "payload": {
+          "$ref": "#/components/schemas/workorderPending"
+        },
+        "traits": [{ "$ref": "#/components/messageTraits/CloudEventContext" }]
+      }
+    },
+    "schemas": {
+      "workorderPending": {
+        "type": "object",
+        "properties": {
+          "work_order_id": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "machine_id": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "priority": {
+            "type": "string",
+            "maxLength": 10
+          },
+          "issue": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "recommended_action": {
+            "type": "string",
+            "maxLength": 500
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "line": {
+            "type": "string",
+            "maxLength": 20
+          }
+        },
+        "required": [
+          "work_order_id",
+          "machine_id",
+          "priority",
+          "issue",
+          "recommended_action"
+        ]
+      }
+    },
+    "messageTraits": {
+      "CloudEventContext": {
+        "headers": {
+          "type": "object",
+          "properties": {
+            "specversion": {
+              "type": "string",
+              "enum": ["1.0"]
+            },
+            "type": {
+              "description": "Type of occurrence which has happened. Often this property is used for routing, observability, policy enforcement, etc.",
+              "type": "string",
+              "minLength": 1
+            },
+            "source": { "type": "string" },
+            "subject": { "type": "string" },
+            "id": { "type": "string" },
+            "time": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "datacontenttype": {
+              "description": "Describe the data encoding format",
+              "type": "string",
+              "const": "application/json"
+            }
+          },
+          "required": ["id", "specversion", "source", "type"]
+        }
+      }
+    }
+  }
+}

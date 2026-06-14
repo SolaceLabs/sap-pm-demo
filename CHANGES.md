@@ -17,12 +17,18 @@ A new **Demo Controls** panel appears at the top of the main content area. It co
 
 ### Idle Modal
 
-When the demo is not running, a modal overlay blocks the dashboard with a friendly message. The SE must click "Start Demo" to begin. Three trigger scenarios:
+The idle modal **only appears after a successful AEM connection** — the SE needs to connect first before the demo can begin. After successful AEM connection, a friendly welcome modal blocks the dashboard. The SE must click "Start Demo" to begin. Modal triggers:
 
-- **On page load** — Welcome message
+- **After successful AEM connection** — "Welcome to the Demo"
 - **After Stop Demo** — "You stopped the demo"
 - **After auto-reset (30 minutes)** — "The demo has automatically reset"
 - **After manual Reset** — "The demo has been reset to a clean state"
+
+If AEM disconnects mid-demo, the modal hides and all demo controls become disabled (the SE needs to reconnect first).
+
+### AEM Connection Gating
+
+All demo control buttons are **disabled until AEM is connected**. The status badge shows "NOT CONNECTED" until a successful AEM connection. This prevents the SE from clicking Start Demo before the dashboard can actually publish control events.
 
 ### Auto-Reset (30 minutes)
 
@@ -129,17 +135,23 @@ python simulator/sensor_sim.py
 
 In your browser, hard-refresh `http://ec2-54-219-47-90.us-west-1.compute.amazonaws.com:9080/sap-pm-demo/dashboard`. You should see:
 
-1. **Idle modal appears** immediately with "Welcome to the Demo"
-2. Click **Settings** (top right), enter AEM credentials, click **Connect**
-3. **Subscribe success messages** in the connection log (look for the new state topic)
-4. Click **Start Demo** in the modal — modal closes, demo timer starts counting down from 30:00
-5. **Status badge** shows "ACTIVE" (green pulse)
-6. Sensor events should be flowing in the event feed (normal readings, no anomaly)
-7. Click **Trigger Anomaly** — status changes to "ANOMALY ACTIVE" (amber pulse)
-8. **Within 15 seconds**, sensor readings for machine-02 should show elevated temp/vibration
-9. **Within 60 seconds**, the agent's next poll should detect the anomaly and create a PM Notification
-10. **Approve in BPA** — within the agent's next poll cycle, a work order is created
-11. Click **Reset** — back to clean state, idle modal appears
+1. **No modal on initial load** — page is fully visible with the AEM Connection Settings panel
+2. **All Demo Control buttons are disabled** (greyed out) and the status badge shows "NOT CONNECTED"
+3. **Enter AEM credentials, click Connect**
+4. **After successful connection:**
+   - Status indicator at top shows "Connected"
+   - Subscribe success messages appear in connection log (look for the new state topic)
+   - **Idle modal appears** with "Welcome to the Demo" message
+   - Demo control buttons become enabled (Start Demo and Reset)
+5. **Click Start Demo** (either from the modal or the main button after closing) — modal closes, demo timer starts counting down from 30:00
+6. **Status badge** shows "ACTIVE" (green pulse)
+7. Sensor events should be flowing in the event feed (normal readings, no anomaly)
+8. Click **Trigger Anomaly** — status changes to "ANOMALY ACTIVE" (amber pulse)
+9. **Within 15 seconds**, sensor readings for machine-02 should show elevated temp/vibration
+10. **Within 60 seconds**, the agent's next poll should detect the anomaly and create a PM Notification
+11. **Approve in BPA** — within the agent's next poll cycle, a work order is created
+12. Click **Reset** — back to clean state, idle modal appears
+13. **Disconnect from AEM** (click Disconnect in Settings) → all demo control buttons disable immediately
 
 ## What Still Polls (Phase 1 limitation)
 

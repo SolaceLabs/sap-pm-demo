@@ -1317,7 +1317,7 @@
           🎬 Demo Controls
           <span class="demo-status-badge" id="demo-status-badge">
             <span class="status-pulse"></span>
-            <span id="demo-status-text">STOPPED</span>
+            <span id="demo-status-text">NOT CONNECTED</span>
           </span>
         </div>
         <div class="demo-timer" id="demo-timer" style="display: none;">
@@ -1325,7 +1325,7 @@
         </div>
       </div>
       <div class="demo-buttons">
-        <button class="demo-btn demo-btn-start" id="btn-start-demo" onclick="startDemo()">
+        <button class="demo-btn demo-btn-start" id="btn-start-demo" onclick="startDemo()" disabled>
           ▶ Start Demo
         </button>
         <button class="demo-btn demo-btn-anomaly" id="btn-trigger-anomaly" onclick="triggerAnomaly()" disabled>
@@ -1334,7 +1334,7 @@
         <button class="demo-btn demo-btn-stop" id="btn-stop-demo" onclick="stopDemo()" disabled>
           ⏹ Stop Demo
         </button>
-        <button class="demo-btn demo-btn-reset" id="btn-reset-demo" onclick="resetDemo()">
+        <button class="demo-btn demo-btn-reset" id="btn-reset-demo" onclick="resetDemo()" disabled>
           🔄 Reset
         </button>
       </div>
@@ -1669,17 +1669,11 @@
         document.getElementById('solace-password').value = CONFIG.SOLACE_PASSWORD;
       }
 
-      // Initialize demo UI in STOPPED state and show idle modal
-      // (the SE must click Start Demo to begin)
+      // Initialize demo UI in STOPPED state. Buttons start DISABLED until
+      // the SE successfully connects to AEM. The idle modal only appears
+      // after a successful connection.
       if (typeof updateDemoUI === 'function') {
         updateDemoUI();
-      }
-      if (typeof showIdleModal === 'function') {
-        showIdleModal(
-          'Welcome to the Demo',
-          'Click <strong>Start Demo</strong> to begin the predictive maintenance scenario.',
-          null
-        );
       }
     });
 
@@ -1721,11 +1715,23 @@
           document.getElementById('connect-btn').style.display = 'none';
           document.getElementById('disconnect-btn').style.display = 'inline-block';
           subscribeToTopics();
+
+          // AEM is now connected — enable demo controls and show the idle modal
+          // inviting the SE to start the demo
+          aemConnected = true;
+          updateDemoUI();
+          showIdleModal(
+            'Welcome to the Demo',
+            'Connection to AEM established. Click <strong>Start Demo</strong> to begin the predictive maintenance scenario.',
+            null
+          );
         });
 
         session.on(solace.SessionEventCode.CONNECT_FAILED_ERROR, (event) => {
           log('error', `Connection failed: ${event.infoStr}`);
           setStatus('error');
+          aemConnected = false;
+          updateDemoUI();
         });
 
         session.on(solace.SessionEventCode.DISCONNECTED, () => {
@@ -1733,6 +1739,15 @@
           setStatus('disconnected');
           document.getElementById('connect-btn').style.display = 'inline-block';
           document.getElementById('disconnect-btn').style.display = 'none';
+
+          // AEM dropped — disable demo controls and stop any running timer
+          aemConnected = false;
+          if (demoState.status !== 'STOPPED') {
+            stopDemoTimer();
+            demoState.status = 'STOPPED';
+          }
+          updateDemoUI();
+          hideIdleModal();
         });
 
         session.on(solace.SessionEventCode.MESSAGE, (message) => {
@@ -1759,6 +1774,9 @@
     // ============================================================
     const DEMO_DURATION_MS = 30 * 60 * 1000;   // 30 minutes
     const DEMO_WARNING_MS  = 28 * 60 * 1000;   // warn at 28 min
+
+    // Tracks AEM connection state — all demo controls are gated on this
+    let aemConnected = false;
     
     const demoState = {
       status: 'STOPPED',      // STOPPED | ACTIVE | ANOMALY_ACTIVE
@@ -1771,7 +1789,7 @@
     };
 
     function publishControlEvent(category, action, extraData = {}) {
-      if (!session) {
+      if (!session || !aemConnected) {
         log('error', 'Cannot send control event - not connected to AEM');
         return false;
       }
@@ -1961,27 +1979,42 @@
       const startBtn = document.getElementById('btn-start-demo');
       const stopBtn = document.getElementById('btn-stop-demo');
       const anomalyBtn = document.getElementById('btn-trigger-anomaly');
+      const resetBtn = document.getElementById('btn-reset-demo');
 
       // Reset badge classes
       badge.classList.remove('active', 'anomaly');
 
+      // If AEM is not connected, everything is disabled and badge shows DISCONNECTED
+      if (!aemConnected) {
+        text.textContent = 'NOT CONNECTED';
+        startBtn.disabled = true;
+        stopBtn.disabled = true;
+        anomalyBtn.disabled = true;
+        resetBtn.disabled = true;
+        return;
+      }
+
+      // AEM is connected — gate buttons by demo state
       if (demoState.status === 'STOPPED') {
         text.textContent = 'STOPPED';
         startBtn.disabled = false;
         stopBtn.disabled = true;
         anomalyBtn.disabled = true;
+        resetBtn.disabled = false;
       } else if (demoState.status === 'ACTIVE') {
         text.textContent = 'ACTIVE';
         badge.classList.add('active');
         startBtn.disabled = true;
         stopBtn.disabled = false;
         anomalyBtn.disabled = false;
+        resetBtn.disabled = false;
       } else if (demoState.status === 'ANOMALY_ACTIVE') {
         text.textContent = 'ANOMALY ACTIVE';
         badge.classList.add('anomaly');
         startBtn.disabled = true;
         stopBtn.disabled = false;
         anomalyBtn.disabled = true;
+        resetBtn.disabled = false;
       }
     }
 

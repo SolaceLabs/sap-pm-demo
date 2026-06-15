@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a6ed1">
+  <title>Technician Dispatch</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 50%, #0a6ed1 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .topbar {
+      background: rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .topbar-title {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .topbar-tech-id {
+      font-size: 12px;
+      font-family: 'SF Mono', Menlo, monospace;
+      background: rgba(255, 255, 255, 0.15);
+      padding: 4px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .card {
+      background: white;
+      border-radius: 20px;
+      padding: 32px 24px;
+      width: 100%;
+      max-width: 420px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .card-icon {
+      font-size: 64px;
+      margin-bottom: 16px;
+      line-height: 1;
+    }
+
+    .card-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .card-message {
+      font-size: 15px;
+      color: #475569;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+
+    .available-btn {
+      background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+      color: white;
+      border: none;
+      padding: 18px 28px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 700;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+      letter-spacing: 0.3px;
+    }
+
+    .available-btn:active {
+      transform: scale(0.97);
+      box-shadow: 0 3px 10px rgba(34, 197, 94, 0.3);
+    }
+
+    .available-btn:disabled {
+      background: #cbd5e1;
+      color: #94a3b8;
+      box-shadow: none;
+      cursor: not-allowed;
+    }
+
+    .accept-btn {
+      background: linear-gradient(135deg, #0a6ed1 0%, #0854a0 100%);
+      color: white;
+      border: none;
+      padding: 18px 28px;
+      border-radius: 14px;
+      font-size: 18px;
+      font-weight: 700;
+      width: 100%;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: 0 6px 20px rgba(10, 110, 209, 0.4);
+      margin-top: 8px;
+    }
+
+    .accept-btn:active { transform: scale(0.97); }
+    .accept-btn.accepted {
+      background: #16a34a;
+      box-shadow: 0 6px 20px rgba(22, 163, 74, 0.4);
+    }
+
+    .standby-pulse {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #fef3c7;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+      position: relative;
+    }
+
+    .standby-pulse::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      border: 3px solid #f59e0b;
+      animation: standbyRing 1.6s ease-out infinite;
+    }
+
+    .standby-pulse-icon { font-size: 36px; }
+
+    @keyframes standbyRing {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .pool-info {
+      background: #f1f5f9;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #475569;
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .pool-info-count {
+      font-weight: 700;
+      color: #0a6ed1;
+      font-size: 16px;
+    }
+
+    .won-card {
+      background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+      border: 2px solid #10b981;
+    }
+
+    .won-badge {
+      background: #10b981;
+      color: white;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-block;
+      margin-bottom: 12px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+
+    .wo-details {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      text-align: left;
+      margin: 16px 0;
+      border: 1px solid #e2e8f0;
+    }
+
+    .wo-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 8px 0;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 13px;
+    }
+
+    .wo-row:last-child { border-bottom: none; }
+    .wo-label { color: #64748b; font-weight: 500; }
+    .wo-value { color: #0f172a; font-weight: 600; text-align: right; }
+
+    .priority-1 { color: #dc2626; }
+    .priority-2 { color: #ea580c; }
+    .priority-3 { color: #ca8a04; }
+    .priority-4 { color: #16a34a; }
+
+    .lost-card {
+      background: #f8fafc;
+      border: 2px solid #cbd5e1;
+    }
+
+    .footer {
+      padding: 16px;
+      text-align: center;
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 11px;
+    }
+
+    .conn-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .conn-status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #94a3b8;
+    }
+
+    .conn-status-dot.connected {
+      background: #4ade80;
+      box-shadow: 0 0 8px #4ade80;
+    }
+
+    .confetti {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 999;
+    }
+
+    .confetti-piece {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      top: -10px;
+      animation: confettiFall 2.5s linear forwards;
+    }
+
+    @keyframes confettiFall {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+  </style>
+  <script src="static/solclient.js"></script>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-title">📱 Technician Dispatch</div>
+    <div class="topbar-tech-id" id="tech-id-display">Connecting...</div>
+  </div>
+
+  <div class="main">
+    <div class="card" id="state-available" style="display: none;">
+      <div class="card-icon">🔧</div>
+      <div class="card-title">Available for Dispatch?</div>
+      <div class="card-message">
+        A maintenance dispatch is pending. Tap below to enter the availability pool. The first technician to tap will be assigned when the work order is created.
+      </div>
+      <button class="available-btn" id="btn-available" onclick="markAvailable()">
+        ✓ I'm Available
+      </button>
+      <div class="pool-info">
+        <span>Technicians in pool:</span>
+        <span class="pool-info-count" id="pool-count">0</span>
+      </div>
+    </div>
+
+    <div class="card" id="state-standby" style="display: none;">
+      <div class="standby-pulse">
+        <span class="standby-pulse-icon">⏳</span>
+      </div>
+      <div class="card-title">Standing By</div>
+      <div class="card-message">
+        You're in the dispatch pool. Wait while the work order is approved...
+      </div>
+      <div class="pool-info">
+        <span>Technicians in pool:</span>
+        <span class="pool-info-count" id="pool-count-standby">1</span>
+      </div>
+    </div>
+
+    <div class="card won-card" id="state-won" style="display: none;">
+      <div class="won-badge">✓ ASSIGNED</div>
+      <div class="card-icon">🎉</div>
+      <div class="card-title">You've Got It!</div>
+      <div class="card-message">
+        Work order assigned to you. Review details below and accept to proceed.
+      </div>
+      <div class="wo-details" id="wo-details"></div>
+      <button class="accept-btn" id="btn-accept" onclick="acceptWorkOrder()">
+        ✓ Accept Work Order
+      </button>
+    </div>
+
+    <div class="card lost-card" id="state-lost" style="display: none;">
+      <div class="card-icon">🤝</div>
+      <div class="card-title">Assignment Went to Another Tech</div>
+      <div class="card-message">
+        <strong id="winner-tech-id-display">Tech-XXXX</strong> was assigned this dispatch.<br><br>
+        Stay ready - another opportunity may come up in the next round.
+      </div>
+    </div>
+
+    <div class="card" id="state-idle" style="display: block;">
+      <div class="card-icon">⏸️</div>
+      <div class="card-title">No Active Dispatch</div>
+      <div class="card-message">
+        Wait for the demo presenter to show the QR code again. You'll be notified when a new dispatch round begins.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="conn-status">
+      <span class="conn-status-dot" id="conn-dot"></span>
+      <span id="conn-text">Connecting to AEM...</span>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+
+    const CONFIG = {
+      SOLACE_HOST: '',
+      SOLACE_VPN: '',
+      SOLACE_USERNAME: '',
+      SOLACE_PASSWORD: '',
+    };
+
+    function loadConfig() {
+      const params = new URLSearchParams(window.location.search);
+      CONFIG.SOLACE_HOST     = params.get('host') || localStorage.getItem('solace_host') || '';
+      CONFIG.SOLACE_VPN      = params.get('vpn')  || localStorage.getItem('solace_vpn')  || '';
+      CONFIG.SOLACE_USERNAME = params.get('user') || localStorage.getItem('solace_username') || '';
+      CONFIG.SOLACE_PASSWORD = params.get('pass') || localStorage.getItem('solace_password') || '';
+    }
+
+    const TOPIC_QR_SHOWN        = 'factory/line-A/dispatch/qr-shown';
+    const TOPIC_AVAILABILITY    = 'factory/line-A/dispatch/availability';
+    const TOPIC_ASSIGNMENT      = 'factory/line-A/dispatch/assignment';
+    const TOPIC_POOL_UPDATE     = 'factory/line-A/dispatch/pool-update';
+    const TOPIC_DEMO_RESET      = 'factory/line-A/control/demo/reset';
+
+    let session = null;
+    let aemConnected = false;
+    let techId = null;
+    let currentRoundId = null;
+    let inPool = false;
+
+    function getTechId() {
+      let id = sessionStorage.getItem('tech_id');
+      if (!id) {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let suffix = '';
+        for (let i = 0; i < 4; i++) {
+          suffix += chars[Math.floor(Math.random() * chars.length)];
+        }
+        id = 'Tech-' + suffix;
+        sessionStorage.setItem('tech_id', id);
+      }
+      return id;
+    }
+
+    function showState(name) {
+      ['available', 'standby', 'won', 'lost', 'idle'].forEach(s => {
+        const el = document.getElementById('state-' + s);
+        if (el) el.style.display = s === name ? 'block' : 'none';
+      });
+    }
+
+    function setConnStatus(connected, text) {
+      const dot = document.getElementById('conn-dot');
+      const txt = document.getElementById('conn-text');
+      if (connected) dot.classList.add('connected');
+      else dot.classList.remove('connected');
+      txt.textContent = text;
+    }
+
+    function updatePoolCount(count) {
+      const el1 = document.getElementById('pool-count');
+      const el2 = document.getElementById('pool-count-standby');
+      if (el1) el1.textContent = count;
+      if (el2) el2.textContent = count;
+    }
+
+    function fireConfetti() {
+      const colors = ['#10b981', '#4ade80', '#fbbf24', '#0a6ed1', '#ec4899'];
+      const container = document.createElement('div');
+      container.className = 'confetti';
+      document.body.appendChild(container);
+      for (let i = 0; i < 60; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + '%';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.animationDelay = (Math.random() * 0.3) + 's';
+        piece.style.animationDuration = (1.8 + Math.random() * 1.2) + 's';
+        container.appendChild(piece);
+      }
+      setTimeout(() => container.remove(), 3500);
+    }
+
+    function initSolace() {
+      try {
+        const factoryProps = new solace.SolclientFactoryProperties();
+        factoryProps.profile = solace.SolclientFactoryProfiles.version10;
+        solace.SolclientFactory.init(factoryProps);
+        return true;
+      } catch (e) {
+        console.error('Failed to init solace:', e);
+        return false;
+      }
+    }
+
+    function connect() {
+      loadConfig();
+      if (!CONFIG.SOLACE_HOST) {
+        setConnStatus(false, 'AEM credentials missing - open dashboard first');
+        return;
+      }
+
+      try {
+        session = solace.SolclientFactory.createSession({
+          url: CONFIG.SOLACE_HOST,
+          vpnName: CONFIG.SOLACE_VPN,
+          userName: CONFIG.SOLACE_USERNAME,
+          password: CONFIG.SOLACE_PASSWORD,
+          connectRetries: 3,
+          reconnectRetries: 3
+        });
+
+        session.on(solace.SessionEventCode.UP_NOTICE, () => {
+          aemConnected = true;
+          setConnStatus(true, 'Connected · ' + techId);
+          subscribeToTopics();
+        });
+
+        session.on(solace.SessionEventCode.CONNECT_FAILED_ERROR, (event) => {
+          aemConnected = false;
+          setConnStatus(false, 'Connection failed');
+          console.error('Connect failed:', event);
+        });
+
+        session.on(solace.SessionEventCode.DISCONNECTED, () => {
+          aemConnected = false;
+          setConnStatus(false, 'Disconnected');
+        });
+
+        session.on(solace.SessionEventCode.MESSAGE, (message) => {
+          handleMessage(message);
+        });
+
+        session.connect();
+      } catch (error) {
+        console.error('Connection error:', error);
+        setConnStatus(false, 'Error: ' + error.message);
+      }
+    }
+
+    function subscribeToTopics() {
+      const topics = [TOPIC_QR_SHOWN, TOPIC_ASSIGNMENT, TOPIC_POOL_UPDATE, TOPIC_DEMO_RESET];
+      topics.forEach(topic => {
+        try {
+          const topicObj = solace.SolclientFactory.createTopicDestination(topic);
+          session.subscribe(topicObj, true, topic, 10000);
+        } catch (error) {
+          console.error('Subscribe failed for', topic, error);
+        }
+      });
+    }
+
+    function handleMessage(message) {
+      const topic = message.getDestination().getName();
+      let payload = {};
+      try {
+        payload = JSON.parse(message.getBinaryAttachment());
+      } catch (e) {
+        console.error('Bad payload:', e);
+        return;
+      }
+
+      const data = payload.data || payload;
+
+      if (topic === TOPIC_QR_SHOWN) {
+        currentRoundId = data.round_id || payload.id;
+        inPool = false;
+        updatePoolCount(0);
+        showState('available');
+      } else if (topic === TOPIC_POOL_UPDATE) {
+        updatePoolCount(data.pool_size || 0);
+      } else if (topic === TOPIC_ASSIGNMENT) {
+        handleAssignment(data);
+      } else if (topic === TOPIC_DEMO_RESET) {
+        currentRoundId = null;
+        inPool = false;
+        updatePoolCount(0);
+        showState('idle');
+      }
+    }
+
+    function handleAssignment(data) {
+      const winner = data.winner_tech_id;
+      if (winner === techId) {
+        displayWorkOrder(data.work_order);
+        showState('won');
+        fireConfetti();
+        if ('vibrate' in navigator) navigator.vibrate([200, 100, 200]);
+      } else if (winner) {
+        document.getElementById('winner-tech-id-display').textContent = winner;
+        showState('lost');
+      } else {
+        showState('idle');
+      }
+      inPool = false;
+    }
+
+    function displayWorkOrder(wo) {
+      if (!wo) {
+        document.getElementById('wo-details').innerHTML = '<div class="wo-row"><span class="wo-label">No details available</span></div>';
+        return;
+      }
+      const priority = wo.priority || 'N/A';
+      const priorityClass = 'priority-' + priority;
+      const html =
+        '<div class="wo-row"><span class="wo-label">Work Order ID</span><span class="wo-value">' + (wo.work_order_id || 'N/A') + '</span></div>' +
+        '<div class="wo-row"><span class="wo-label">Equipment</span><span class="wo-value">' + (wo.equipment_id || 'N/A') + '</span></div>' +
+        '<div class="wo-row"><span class="wo-label">Type</span><span class="wo-value">' + (wo.order_type || 'PM01') + '</span></div>' +
+        '<div class="wo-row"><span class="wo-label">Priority</span><span class="wo-value ' + priorityClass + '">' + priority + '</span></div>' +
+        '<div class="wo-row"><span class="wo-label">Description</span><span class="wo-value">' + (wo.short_text || 'Maintenance required') + '</span></div>' +
+        '<div class="wo-row"><span class="wo-label">From Notification</span><span class="wo-value">' + (wo.notification_id || 'N/A') + '</span></div>';
+      document.getElementById('wo-details').innerHTML = html;
+    }
+
+    function markAvailable() {
+      if (!aemConnected || !currentRoundId) return;
+      if (inPool) return;
+
+      const topic = TOPIC_AVAILABILITY;
+      const payload = {
+        specversion: '1.0',
+        type: 'com.factory.dispatch.availability.v1',
+        source: 'urn:com:factory:line-A:technician:' + techId,
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        time: new Date().toISOString(),
+        datacontenttype: 'application/json',
+        data: {
+          tech_id: techId,
+          round_id: currentRoundId,
+        }
+      };
+
+      try {
+        const msg = solace.SolclientFactory.createMessage();
+        msg.setDestination(solace.SolclientFactory.createTopicDestination(topic));
+        msg.setBinaryAttachment(JSON.stringify(payload));
+        msg.setDeliveryMode(solace.MessageDeliveryModeType.PERSISTENT);
+        session.send(msg);
+        inPool = true;
+        showState('standby');
+      } catch (error) {
+        console.error('Failed to send availability:', error);
+      }
+    }
+
+    function acceptWorkOrder() {
+      const btn = document.getElementById('btn-accept');
+      btn.textContent = '✓ Accepted - Proceed to Equipment';
+      btn.classList.add('accepted');
+      btn.disabled = true;
+      if ('vibrate' in navigator) navigator.vibrate(100);
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      techId = getTechId();
+      document.getElementById('tech-id-display').textContent = techId;
+      showState('idle');
+      if (initSolace()) {
+        connect();
+      } else {
+        setConnStatus(false, 'Solace library failed to load');
+      }
+    });
+  </script>
+</body>
+</html>

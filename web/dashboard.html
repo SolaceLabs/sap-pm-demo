@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SAP PM Event Monitor - Predictive Maintenance</title>
   <!-- Solace PubSub+ JavaScript API - served from /sap-pm-demo/static/ -->
+  <script src="static/qrcode.js"></script>
   <script src="static/solclient.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -1149,7 +1150,222 @@
       background: rgba(255, 255, 255, 0.2);
     }
 
-    /* Warning banner at 28-min mark */
+    .demo-btn-qr {
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: white;
+    }
+
+    .demo-btn-qr:hover:not(:disabled) {
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(124, 58, 237, 0.4);
+    }
+
+    /* QR Code Modal */
+    .qr-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(15, 23, 42, 0.92);
+      backdrop-filter: blur(10px);
+      z-index: 9998;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .qr-modal-overlay.show { display: flex; }
+
+    .qr-modal {
+      background: white;
+      border-radius: 24px;
+      padding: 40px 48px;
+      max-width: 640px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+      position: relative;
+    }
+
+    .qr-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      background: #f1f5f9;
+      border: none;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      font-size: 20px;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .qr-modal-close:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    .qr-modal-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 8px;
+    }
+
+    .qr-modal-subtitle {
+      font-size: 15px;
+      color: #475569;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .qr-code-container {
+      background: white;
+      padding: 16px;
+      border-radius: 16px;
+      display: inline-block;
+      margin-bottom: 20px;
+      border: 4px solid #0a6ed1;
+    }
+
+    .qr-code-container img,
+    .qr-code-container svg {
+      display: block;
+      width: 280px;
+      height: 280px;
+    }
+
+    .qr-pool-counter {
+      background: linear-gradient(135deg, #0a6ed1 0%, #0854a0 100%);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .qr-pool-count-number {
+      font-size: 32px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+
+    .qr-pool-count-label {
+      opacity: 0.9;
+    }
+
+    .qr-modal-instructions {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      z-index: 10000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: #0f172a;
+      color: white;
+      padding: 14px 20px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      font-size: 14px;
+      font-weight: 500;
+      min-width: 240px;
+      max-width: 360px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: toastSlideIn 0.3s ease-out, toastSlideOut 0.4s ease-in 2.6s forwards;
+      pointer-events: auto;
+    }
+
+    .toast.toast-success {
+      background: #16a34a;
+    }
+
+    .toast.toast-info {
+      background: #0a6ed1;
+    }
+
+    .toast.toast-warning {
+      background: #d97706;
+    }
+
+    @keyframes toastSlideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes toastSlideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+
+    /* Winner Reveal Banner (on dashboard, after assignment) */
+    .winner-banner {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      display: none;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.3);
+      animation: winnerSlideIn 0.5s ease-out;
+    }
+
+    .winner-banner.show { display: flex; }
+
+    @keyframes winnerSlideIn {
+      from { transform: translateY(-20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    .winner-icon {
+      font-size: 32px;
+    }
+
+    .winner-text {
+      flex: 1;
+    }
+
+    .winner-text-line1 {
+      font-size: 13px;
+      opacity: 0.9;
+      letter-spacing: 0.3px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .winner-text-line2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    /* Idle Modal Overlay */
     .demo-warning-banner {
       background: #fef3c7;
       color: #78350f;
@@ -1331,6 +1547,9 @@
         <button class="demo-btn demo-btn-anomaly" id="btn-trigger-anomaly" onclick="triggerAnomaly()" disabled>
           ⚡ Trigger Anomaly
         </button>
+        <button class="demo-btn demo-btn-qr" id="btn-show-qr" onclick="showDispatchQR()" disabled>
+          📱 Show QR for Technicians
+        </button>
         <button class="demo-btn demo-btn-stop" id="btn-stop-demo" onclick="stopDemo()" disabled>
           ⏹ Stop Demo
         </button>
@@ -1341,6 +1560,15 @@
       <div class="demo-warning-banner" id="demo-warning-banner">
         ⚠️ Demo will auto-reset in 2 minutes. 
         <button onclick="extendDemo()">Extend 30 min</button>
+      </div>
+    </div>
+
+    <!-- Winner Reveal Banner -->
+    <div class="winner-banner" id="winner-banner">
+      <div class="winner-icon">🎯</div>
+      <div class="winner-text">
+        <div class="winner-text-line1">Dispatch Assigned</div>
+        <div class="winner-text-line2" id="winner-banner-text">Tech-XXXX received the work order</div>
       </div>
     </div>
 
@@ -1622,7 +1850,9 @@
       'factory/line-A/*/notification/approved',// Approvals from BPA
       'factory/line-A/*/notification/rejected',// Rejections from BPA
       'factory/line-A/*/workorder/created',    // Work orders from agent
-      'factory/line-A/control/demo/state'      // Demo state broadcasts from simulator
+      'factory/line-A/control/demo/state',     // Demo state broadcasts from simulator
+      'factory/line-A/dispatch/pool-update',   // Pool size updates from arbitrator
+      'factory/line-A/dispatch/assignment'     // Winner announcement from arbitrator
     ];
 
     // ============================================================
@@ -1716,8 +1946,16 @@
           document.getElementById('disconnect-btn').style.display = 'inline-block';
           subscribeToTopics();
 
+          // Save credentials so the QR code URL can include them for the technician page
+          // (this is a demo, on a private EC2 - acceptable for now; production would use a token service)
+          try {
+            localStorage.setItem('solace_host', host);
+            localStorage.setItem('solace_vpn', vpn);
+            localStorage.setItem('solace_username', username);
+            localStorage.setItem('solace_password', password);
+          } catch (e) { /* localStorage may be unavailable */ }
+
           // AEM is now connected — enable demo controls and show the idle modal
-          // inviting the SE to start the demo
           aemConnected = true;
           updateDemoUI();
           showIdleModal(
@@ -1833,6 +2071,7 @@
       // Update UI
       updateDemoUI();
       hideIdleModal();
+      hideWinnerBanner();
       startDemoTimer();
 
       log('success', `▶ Demo started (session ${demoState.sessionId})`);
@@ -1859,8 +2098,10 @@
       demoState.sessionId = null;
       demoState.startedAt = null;
       stopDemoTimer();
+      hideDispatchQR();
+      hideWinnerBanner();
       updateDemoUI();
-      showIdleModal('Demo Stopped', 'You stopped the demo. Click Start to begin a new session.', null);
+      showToast('Demo stopped', 'info');
       log('info', '⏹ Demo stopped');
     }
 
@@ -1870,9 +2111,11 @@
       demoState.sessionId = null;
       demoState.startedAt = null;
       stopDemoTimer();
+      hideDispatchQR();
+      hideWinnerBanner();
       clearDashboardState();
       updateDemoUI();
-      showIdleModal('Demo Reset', 'The demo has been reset to a clean state. Click Start to begin a new session.', null);
+      showToast('Demo reset to clean state', 'info');
       log('info', '🔄 Demo reset (state cleared)');
     }
 
@@ -1884,6 +2127,138 @@
       stopDemoTimer();
       startDemoTimer();
       log('info', '⏱️ Demo extended by 30 minutes');
+      showToast('Demo extended by 30 minutes', 'info');
+    }
+
+    // ============================================================
+    // DISPATCH (QR-code-based technician assignment)
+    // ============================================================
+    let dispatchRoundId = null;
+
+    function showDispatchQR() {
+      if (!aemConnected) return;
+      if (demoState.status === 'STOPPED') {
+        showToast('Start the demo first', 'warning');
+        return;
+      }
+
+      // Generate a fresh round ID
+      dispatchRoundId = (crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : String(Date.now()).slice(-8));
+
+      // Notify arbitrator that QR is shown - this clears the pool and starts a new round
+      publishDispatchEvent('qr-shown', { round_id: dispatchRoundId });
+
+      // Build the technician page URL with AEM credentials baked in
+      const host = encodeURIComponent(localStorage.getItem('solace_host') || '');
+      const vpn  = encodeURIComponent(localStorage.getItem('solace_vpn')  || '');
+      const user = encodeURIComponent(localStorage.getItem('solace_username') || '');
+      const pass = encodeURIComponent(localStorage.getItem('solace_password') || '');
+
+      // Build URL using the current origin so it works on both EC2-direct and CloudFront
+      const base = window.location.origin + '/sap-pm-demo/technician';
+      const url  = base + '?host=' + host + '&vpn=' + vpn + '&user=' + user + '&pass=' + pass;
+
+      // Generate QR code
+      try {
+        const qr = qrcode(0, 'L');  // type 0 = auto-detect, error correction L
+        qr.addData(url);
+        qr.make();
+        const html = qr.createImgTag(6, 8);  // cell size, margin
+        document.getElementById('qr-code-container').innerHTML = html;
+      } catch (e) {
+        console.error('QR generation failed:', e);
+        document.getElementById('qr-code-container').innerHTML =
+          '<div style="padding: 80px; color: #ef4444;">QR generation failed</div>';
+      }
+
+      document.getElementById('qr-pool-count').textContent = '0';
+      document.getElementById('qr-round-id').textContent = dispatchRoundId;
+      document.getElementById('qr-modal-overlay').classList.add('show');
+
+      log('success', '📱 QR shown for round ' + dispatchRoundId);
+    }
+
+    function hideDispatchQR() {
+      document.getElementById('qr-modal-overlay').classList.remove('show');
+    }
+
+    function publishDispatchEvent(action, data) {
+      // Dispatch topics live at factory/line-A/dispatch/{action}, NOT under control/
+      if (!session || !aemConnected) {
+        log('error', 'Cannot send dispatch event - not connected to AEM');
+        return false;
+      }
+      const topic = 'factory/line-A/dispatch/' + action;
+      const payload = {
+        specversion: '1.0',
+        type: 'com.factory.dispatch.' + action + '.v1',
+        source: 'urn:com:factory:line-A:dashboard',
+        id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+        time: new Date().toISOString(),
+        datacontenttype: 'application/json',
+        data: data || {}
+      };
+      try {
+        const message = solace.SolclientFactory.createMessage();
+        message.setDestination(solace.SolclientFactory.createTopicDestination(topic));
+        message.setBinaryAttachment(JSON.stringify(payload));
+        message.setDeliveryMode(solace.MessageDeliveryModeType.PERSISTENT);
+        session.send(message);
+        return true;
+      } catch (error) {
+        log('error', 'Failed to send dispatch event: ' + error.message);
+        return false;
+      }
+    }
+
+    function handlePoolUpdate(data) {
+      const count = data.pool_size || 0;
+      const el = document.getElementById('qr-pool-count');
+      if (el) {
+        el.textContent = count;
+        // Brief pulse animation when count changes
+        el.style.transition = 'transform 0.3s ease-out';
+        el.style.transform = 'scale(1.2)';
+        setTimeout(() => { el.style.transform = 'scale(1)'; }, 300);
+      }
+    }
+
+    function handleAssignmentEvent(data) {
+      // Auto-close QR modal when assignment happens
+      hideDispatchQR();
+
+      // Show winner banner
+      const banner = document.getElementById('winner-banner');
+      const text = document.getElementById('winner-banner-text');
+      if (data.status === 'unassigned') {
+        text.textContent = 'No technicians were available (pool was empty)';
+        banner.style.background = 'linear-gradient(135deg, #64748b 0%, #475569 100%)';
+      } else {
+        text.textContent = data.winner_tech_id + ' received the work order' +
+                           (data.pool_size > 1 ? ' (' + (data.pool_size - 1) + ' others standing by)' : '');
+        banner.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+      }
+      banner.classList.add('show');
+      log('success', '🎯 Dispatch assigned to ' + (data.winner_tech_id || 'nobody (empty pool)'));
+    }
+
+    function hideWinnerBanner() {
+      document.getElementById('winner-banner').classList.remove('show');
+    }
+
+    // ============================================================
+    // TOAST NOTIFICATIONS
+    // ============================================================
+    function showToast(message, level) {
+      level = level || 'info';
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast toast-' + level;
+      const icon = level === 'success' ? '✓' : level === 'warning' ? '⚠' : 'ℹ';
+      toast.innerHTML = '<span>' + icon + '</span><span>' + message + '</span>';
+      container.appendChild(toast);
+      // Auto-remove after animation completes (3s)
+      setTimeout(() => { toast.remove(); }, 3100);
     }
 
     function clearDashboardState() {
@@ -1964,6 +2339,8 @@
       demoState.sessionId = null;
       demoState.startedAt = null;
       stopDemoTimer();
+      hideDispatchQR();
+      hideWinnerBanner();
       clearDashboardState();
       updateDemoUI();
       showIdleModal(
@@ -1980,6 +2357,7 @@
       const stopBtn = document.getElementById('btn-stop-demo');
       const anomalyBtn = document.getElementById('btn-trigger-anomaly');
       const resetBtn = document.getElementById('btn-reset-demo');
+      const qrBtn = document.getElementById('btn-show-qr');
 
       // Reset badge classes
       badge.classList.remove('active', 'anomaly');
@@ -1991,6 +2369,7 @@
         stopBtn.disabled = true;
         anomalyBtn.disabled = true;
         resetBtn.disabled = true;
+        qrBtn.disabled = true;
         return;
       }
 
@@ -2001,6 +2380,7 @@
         stopBtn.disabled = true;
         anomalyBtn.disabled = true;
         resetBtn.disabled = false;
+        qrBtn.disabled = true;
       } else if (demoState.status === 'ACTIVE') {
         text.textContent = 'ACTIVE';
         badge.classList.add('active');
@@ -2008,6 +2388,7 @@
         stopBtn.disabled = false;
         anomalyBtn.disabled = false;
         resetBtn.disabled = false;
+        qrBtn.disabled = false;   // QR available once demo is running
       } else if (demoState.status === 'ANOMALY_ACTIVE') {
         text.textContent = 'ANOMALY ACTIVE';
         badge.classList.add('anomaly');
@@ -2015,6 +2396,7 @@
         stopBtn.disabled = false;
         anomalyBtn.disabled = true;
         resetBtn.disabled = false;
+        qrBtn.disabled = false;   // QR especially useful in anomaly state
       }
     }
 
@@ -2083,6 +2465,16 @@
         // Sync simulator state with dashboard — informational only
         handleDemoStateEvent(payload);
         log('info', `Received demo state event on ${topic}`);
+        return;
+      }
+
+      if (topic.includes('/dispatch/pool-update')) {
+        handlePoolUpdate(payload);
+        return;
+      }
+
+      if (topic.includes('/dispatch/assignment')) {
+        handleAssignmentEvent(payload);
         return;
       }
 
@@ -2380,6 +2772,31 @@
       }
     });
   </script>
+
+  <!-- Toast Notifications Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- QR Code Modal Overlay -->
+  <div class="qr-modal-overlay" id="qr-modal-overlay">
+    <div class="qr-modal">
+      <button class="qr-modal-close" onclick="hideDispatchQR()" title="Close">×</button>
+      <div class="qr-modal-title">📱 Available Technicians?</div>
+      <div class="qr-modal-subtitle">
+        Scan this QR code with your phone to enter the dispatch availability pool.<br>
+        The <strong>first technician to tap</strong> will be assigned when the work order is approved.
+      </div>
+      <div class="qr-code-container" id="qr-code-container">
+        <!-- QR code injected here -->
+      </div>
+      <div class="qr-pool-counter">
+        <span class="qr-pool-count-number" id="qr-pool-count">0</span>
+        <span class="qr-pool-count-label">Technicians in pool</span>
+      </div>
+      <div class="qr-modal-instructions" id="qr-modal-instructions">
+        Round: <code id="qr-round-id">—</code>
+      </div>
+    </div>
+  </div>
 
   <!-- Idle Modal Overlay -->
   <div class="idle-modal-overlay" id="idle-modal-overlay">

@@ -1,189 +1,198 @@
-# Phase 1 Changes — Demo Controls
+# Phase 1 (Complete) — Demo Controls + QR Dispatch
 
-This document describes the changes made for Phase 1 of the demo refactor. After applying these changes, the SE has full control over when anomalies happen, when the demo starts/stops, and what state the system is in.
+This bundle delivers the complete Phase 1 demo experience: SE-controlled demo flow, polished UX, and audience-participation QR-code technician dispatch.
 
 ## What's New
 
-### Dashboard
+### Demo Controls (already shipped, refined in this bundle)
+- **Start Demo / Stop Demo / Trigger Anomaly / Reset** buttons in dashboard
+- Status badge: NOT CONNECTED / STOPPED / ACTIVE / ANOMALY ACTIVE
+- 30-minute auto-reset timer with 28-minute warning + "Extend 30 min" button
+- All controls gated on AEM connection state
 
-A new **Demo Controls** panel appears at the top of the main content area. It contains:
+### NEW: QR-Code Technician Dispatch (Phase 1.2)
+The signature WOW moment: during the demo, the presenter shows a QR code. Audience scans, taps "I'm Available" on their phones, and the first to tap wins the assignment when the work order is approved.
 
-- **▶ Start Demo** — begins a new demo session (publishes `demo/start` event)
-- **⚡ Trigger Anomaly** — initiates the machine-02 anomaly drift sequence (publishes `anomaly/trigger` event)
-- **⏹ Stop Demo** — ends the current demo session, clears anomaly state
-- **🔄 Reset** — hard reset: clears state, dashboard counters, event feed
-- **Demo Status Badge** — visual indicator showing STOPPED / ACTIVE / ANOMALY ACTIVE
-- **Demo Timer** — countdown showing time until auto-reset
+**Flow:**
+1. SE clicks **▶ Start Demo** → demo active
+2. SE clicks **⚡ Trigger Anomaly** → machine-02 starts drifting
+3. Agent detects anomaly within ~10s → publishes PM Notification
+4. SE clicks **📱 Show QR for Technicians** → big QR modal appears on dashboard
+5. Audience scans QR → each phone opens the technician page
+6. Phones tap "✓ I'm Available" → live counter in modal increments
+7. SE approves notification in BPA
+8. Agent creates work order → arbitrator picks first-in-pool winner
+9. Winning phone shows full work order details with confetti + vibration
+10. Losing phones show "Tech-XXXX was assigned this dispatch"
+11. Dashboard shows winner banner: "🎯 Tech-A1B2 received the work order (2 others standing by)"
 
-### Idle Modal
+### NEW: Toast Notifications (Phase 1.1)
+Replaced the modal-after-Stop/Reset with subtle toast notifications that slide in from the top-right and auto-dismiss in 3 seconds. Modals now only appear when the SE needs to take action:
+- AEM connection success (welcome message)
+- 30-minute auto-reset (needs SE to re-Start)
 
-The idle modal **only appears after a successful AEM connection** — the SE needs to connect first before the demo can begin. After successful AEM connection, a friendly welcome modal blocks the dashboard. The SE must click "Start Demo" to begin. Modal triggers:
-
-- **After successful AEM connection** — "Welcome to the Demo"
-- **After Stop Demo** — "You stopped the demo"
-- **After auto-reset (30 minutes)** — "The demo has automatically reset"
-- **After manual Reset** — "The demo has been reset to a clean state"
-
-If AEM disconnects mid-demo, the modal hides and all demo controls become disabled (the SE needs to reconnect first).
-
-### AEM Connection Gating
-
-All demo control buttons are **disabled until AEM is connected**. The status badge shows "NOT CONNECTED" until a successful AEM connection. This prevents the SE from clicking Start Demo before the dashboard can actually publish control events.
-
-### Auto-Reset (30 minutes)
-
-- Timer starts when SE clicks "Start Demo"
-- At 28-minute mark: warning banner appears with "Extend 30 min" button
-- At 30-minute mark: hard reset, idle modal explains what happened
-- Timer is browser-side for Phase 1 (Phase 2 will move it server-side)
-
-### Visual Polish
-
-- **Stage highlight blink** now blinks for 2 seconds, then lingers for ~5 more seconds with a fading background. Audiences can register what's happening instead of missing the flash.
+### Recommended: CHECK_INTERVAL=10 (Phase 1.1)
+Updated `.env.example` to recommend `CHECK_INTERVAL=10` instead of `60`. Snappier anomaly detection (10-15s after Trigger Anomaly instead of up to 60s).
 
 ## What Changed in the Code
 
-### `agent/simulator/sensor_sim.py`
+### NEW: `services/dispatch_arbitrator.py`
+Python service that manages the QR-code dispatch flow.
 
-**Major changes:**
-- Removed the auto-anomaly timer (`AUTO_ANOMALY`, `ANOMALY_DELAY_SEC` env vars no longer used)
-- Added MQTT subscription to `factory/line-A/control/+/+`
-- Added `handle_control_event()` that reacts to `demo/start`, `demo/stop`, `demo/reset`, `anomaly/trigger`
-- Added `broadcast_state()` that publishes simulator state changes to `factory/line-A/control/demo/state`
-- Anomaly drift now triggered ONLY by control events from the dashboard
-- Drift growth rate increased (`0.01` → `0.03` per cycle) so the demo gets to "concerning readings" faster after trigger
+**Subscribes to:**
+- `factory/line-A/dispatch/qr-shown` — presenter clicked Show QR (new round)
+- `factory/line-A/dispatch/availability` — phone tapped "I'm Available"
+- `factory/line-A/+/workorder/created` — agent created a work order (trigger assignment)
+- `factory/line-A/control/demo/reset` — hard reset, clear pool
 
-**Behavior change:** The simulator now starts in a "normal readings only" state. It continues publishing sensor data, but no anomaly until the dashboard sends a trigger event.
+**Publishes to:**
+- `factory/line-A/dispatch/assignment` — winner selected
+- `factory/line-A/dispatch/pool-update` — pool size updated (live counter)
 
-### `agent/agent.py`
+**Pool logic:**
+- First-in-pool wins
+- Each phone has a unique tech_id (browser-generated, persisted in sessionStorage)
+- Duplicates deduplicated by tech_id
+- Round bounded by round_id (each Show QR click = new round)
+- Stale events from previous rounds are ignored
 
-**Not changed in Phase 1.** Agent still polls every 60 seconds via `CHECK_INTERVAL`. Phase 2 will make this event-driven.
+### NEW: `services/requirements.txt`, `services/run_arbitrator.sh`, `services/README.md`
+
+### NEW: `web/technician.html`
+Mobile-optimized page that audience phones land on after scanning the QR code.
+
+**Five states:**
+- **AVAILABLE** — round is open, big "I'm Available" button
+- **STANDING BY** — joined the pool, watching pool counter
+- **WON** — assigned the work order, full details, confetti, vibration, Accept button
+- **LOST** — another tech got it, friendly "stay ready" message
+- **IDLE** — no active round, wait for presenter
 
 ### `web/dashboard.html`
+- New "📱 Show QR for Technicians" button (purple gradient, enabled when ACTIVE or ANOMALY_ACTIVE)
+- QR code modal with live pool counter inside
+- Winner reveal banner above stats row
+- Toast notification system (top-right, 3s auto-dismiss)
+- Removed modals after Stop/Reset (now toasts)
+- Saves AEM credentials to localStorage on connect (for QR URL embedding)
+- Subscribed to dispatch/pool-update and dispatch/assignment
 
-**Added:**
-- CSS for Demo Controls panel, status badge, timer, warning banner, idle modal
-- HTML for Demo Controls panel (placed between Connection Panel and Stats Row)
-- HTML for Idle Modal overlay (placed before closing `</body>`)
-- JavaScript:
-  - `publishControlEvent(category, action, extraData)` — publishes CloudEvent to AEM
-  - `startDemo()`, `stopDemo()`, `triggerAnomaly()`, `resetDemo()`, `extendDemo()` — button handlers
-  - `startDemoTimer()`, `stopDemoTimer()`, `updateTimerDisplay()`, `handleAutoReset()` — 30-min timer
-  - `updateDemoUI()` — sync button enabled state and badge with demo state
-  - `showIdleModal(title, message, reason)`, `hideIdleModal()` — modal management
-  - `clearDashboardState()` — clear stats, event feed, and stage highlights on reset
-  - `handleDemoStateEvent(payload)` — log simulator state syncs
-- Subscribed to new topic: `factory/line-A/control/demo/state`
-- DOMContentLoaded handler updated to show idle modal on page load
-- Extended `blink-highlight` animation with `lingerHighlight` keyframe (5s linger after blink)
+### `agent/.env.example`
+- Updated `CHECK_INTERVAL` default to `10` with explanation
 
-## Topic Reference
+## Topic Reference (Complete)
 
-**Control plane (new):**
-- `factory/line-A/control/demo/start` — dashboard publishes when SE clicks Start Demo
-- `factory/line-A/control/demo/stop` — dashboard publishes when SE clicks Stop Demo
-- `factory/line-A/control/demo/reset` — dashboard publishes when SE clicks Reset, or on auto-reset
-- `factory/line-A/control/anomaly/trigger` — dashboard publishes when SE clicks Trigger Anomaly
-- `factory/line-A/control/demo/state` — simulator publishes state changes (informational)
+**Control plane:**
+- `factory/line-A/control/demo/start` — dashboard → simulator
+- `factory/line-A/control/demo/stop` — dashboard → simulator
+- `factory/line-A/control/demo/reset` — dashboard → simulator + arbitrator
+- `factory/line-A/control/anomaly/trigger` — dashboard → simulator
+- `factory/line-A/control/demo/state` — simulator → all (state sync)
+
+**Dispatch plane (NEW):**
+- `factory/line-A/dispatch/qr-shown` — dashboard → arbitrator
+- `factory/line-A/dispatch/availability` — phone → arbitrator
+- `factory/line-A/dispatch/pool-update` — arbitrator → all (live counter)
+- `factory/line-A/dispatch/assignment` — arbitrator → all (winner)
 
 **Data plane (unchanged):**
-- `factory/line-A/{machine_id}/sensors` — simulator publishes sensor readings
-- `factory/line-A/{machine_id}/notification/pending` — agent publishes PM notifications
-- `factory/line-A/{machine_id}/notification/approved` — BPA publishes approvals
-- `factory/line-A/{machine_id}/notification/rejected` — BPA publishes rejections
-- `factory/line-A/{machine_id}/workorder/created` — agent publishes work orders
+- `factory/line-A/{machine_id}/sensors` — simulator → all
+- `factory/line-A/{machine_id}/notification/pending` — agent → BPA
+- `factory/line-A/{machine_id}/notification/approved` — BPA → MCP
+- `factory/line-A/{machine_id}/notification/rejected` — BPA → MCP
+- `factory/line-A/{machine_id}/workorder/created` — agent → all (including arbitrator)
 
-## Deployment Steps
+## Deployment
 
 ### 1. On your Mac (push to GitHub)
 
 ```bash
 cd /Users/sumeetkoshal/ai/sap-pm-demo
 
-# Replace the two changed files with the new versions
-# (Drop in the files from this bundle)
+# Unzip the bundle
+unzip -o ~/Downloads/sap-pm-demo-phase1-complete.zip -d /tmp/p1c/
 
-# Verify what changed
+# Copy changed files
+cp /tmp/p1c/agent/simulator/sensor_sim.py agent/simulator/sensor_sim.py
+cp /tmp/p1c/agent/.env.example agent/.env.example
+cp /tmp/p1c/web/dashboard.html web/dashboard.html
+cp /tmp/p1c/web/technician.html web/technician.html
+
+# New files
+mkdir -p services
+cp /tmp/p1c/services/dispatch_arbitrator.py services/dispatch_arbitrator.py
+cp /tmp/p1c/services/requirements.txt services/requirements.txt
+cp /tmp/p1c/services/run_arbitrator.sh services/run_arbitrator.sh
+cp /tmp/p1c/services/README.md services/README.md
+chmod +x services/run_arbitrator.sh
+
+cp /tmp/p1c/CHANGES.md .
+
+# Commit
+git add -A
 git status
-git diff agent/simulator/sensor_sim.py | head -30
-git diff web/dashboard.html | head -30
-
-# Commit and push
-git add agent/simulator/sensor_sim.py web/dashboard.html CHANGES.md
-git commit -m "Phase 1: Demo controls (Start/Stop/Trigger Anomaly/Reset) with 30-min auto-reset"
+git commit -m "Phase 1 complete: demo controls, toasts, QR-code technician dispatch"
 git push
 ```
 
-### 2. On EC2 (pull and restart)
+### 2. On EC2
 
 ```bash
 ssh ubuntu@ec2-54-219-47-90.us-west-1.compute.amazonaws.com
 cd /home/ubuntu/sap/ai/pm-demo
 git pull
 
-# Restart the simulator (it now subscribes to control topics)
-# Find the simulator terminal and Ctrl+C, then:
+# Update CHECK_INTERVAL in .env
+nano agent/.env
+# Change CHECK_INTERVAL=60 to CHECK_INTERVAL=10
+
+# Terminal 1 — Simulator:
 cd /home/ubuntu/sap/ai/pm-demo/agent
 source .venv/bin/activate
 python simulator/sensor_sim.py
 
-# The dashboard updates automatically when nginx reloads the file
-# Just hard-refresh in your browser (Cmd+Shift+R) to bypass cache
+# Terminal 2 — Agent:
+cd /home/ubuntu/sap/ai/pm-demo/agent
+source .venv/bin/activate
+python agent.py
+
+# Terminal 3 — Arbitrator:
+cd /home/ubuntu/sap/ai/pm-demo/services
+chmod +x run_arbitrator.sh
+./run_arbitrator.sh
 ```
 
-### 3. Verification
+### 3. Nginx — Add technician page location
 
-In your browser, hard-refresh `http://ec2-54-219-47-90.us-west-1.compute.amazonaws.com:9080/sap-pm-demo/dashboard`. You should see:
+Add this block to `/etc/nginx/sites-enabled/usecases` alongside the existing dashboard block:
 
-1. **No modal on initial load** — page is fully visible with the AEM Connection Settings panel
-2. **All Demo Control buttons are disabled** (greyed out) and the status badge shows "NOT CONNECTED"
-3. **Enter AEM credentials, click Connect**
-4. **After successful connection:**
-   - Status indicator at top shows "Connected"
-   - Subscribe success messages appear in connection log (look for the new state topic)
-   - **Idle modal appears** with "Welcome to the Demo" message
-   - Demo control buttons become enabled (Start Demo and Reset)
-5. **Click Start Demo** (either from the modal or the main button after closing) — modal closes, demo timer starts counting down from 30:00
-6. **Status badge** shows "ACTIVE" (green pulse)
-7. Sensor events should be flowing in the event feed (normal readings, no anomaly)
-8. Click **Trigger Anomaly** — status changes to "ANOMALY ACTIVE" (amber pulse)
-9. **Within 15 seconds**, sensor readings for machine-02 should show elevated temp/vibration
-10. **Within 60 seconds**, the agent's next poll should detect the anomaly and create a PM Notification
-11. **Approve in BPA** — within the agent's next poll cycle, a work order is created
-12. Click **Reset** — back to clean state, idle modal appears
-13. **Disconnect from AEM** (click Disconnect in Settings) → all demo control buttons disable immediately
+```nginx
+location /sap-pm-demo/technician {
+    default_type text/html;
+    alias /home/ubuntu/sap/ai/pm-demo/web/technician.html;
+}
+```
 
-## What Still Polls (Phase 1 limitation)
+Then reload: `sudo nginx -t && sudo nginx -s reload`
 
-The **agent** still polls every 60 seconds (`CHECK_INTERVAL=60` in `.env`). This means:
-- Even when no demo is running, agent makes one LLM call per minute
-- Cost: minimal (only "all normal, no action" responses) but not zero
+### 4. Verification
 
-**Phase 2 will eliminate this.** Agent will subscribe to events and only call LLM when there's actually something to act on. The 30-minute auto-reset will also move from browser-side to server-side.
+Hard-refresh dashboard (`Cmd+Shift+R`):
+
+1. Connect to AEM → welcome modal
+2. Start Demo → timer starts
+3. Trigger Anomaly → agent detects within 10-15s
+4. Click "📱 Show QR for Technicians" → QR modal with pool counter
+5. Scan QR with phone → phone shows "I'm Available" button
+6. Tap "I'm Available" → pool counter increments in modal
+7. Approve notification in BPA
+8. Agent creates work order → winning phone gets confetti + WO details
+9. Dashboard shows winner banner, QR modal auto-closes
+10. Stop Demo → toast "Demo stopped" (no modal)
+11. Reset → toast "Demo reset to clean state"
 
 ## Phase 2 Preview
 
-When you're ready, Phase 2 will:
-- Refactor `agent/agent.py` from a polling loop to an event-driven service
-- Subscribe to: `notification/approved`, `notification/rejected`, `anomaly/trigger`, sensor changes
-- Server-side 30-minute timer (independent of browser state)
-- Zero LLM calls when idle
-- Faster reaction time (work order creation within seconds of BPA approval, not 60s)
-
-## Testing Locally Without EC2
-
-If you want to validate the simulator changes work on your Mac before pushing to EC2:
-
-```bash
-cd /Users/sumeetkoshal/ai/sap-pm-demo/agent
-source .venv/bin/activate
-python simulator/sensor_sim.py
-
-# In another terminal, use Solace Try-Me (or any MQTT client)
-# Publish a test message to: factory/line-A/control/anomaly/trigger
-# Payload: {"specversion":"1.0","type":"com.factory.control.anomaly.trigger.v1","data":{}}
-
-# Watch the simulator logs — it should print:
-#   "ANOMALY TRIGGERED on machine-02 - bearing degradation starts now"
-# And subsequent sensor readings should show elevated values
-```
+- Agent goes event-driven (no polling, zero idle LLM cost)
+- 30-min timer moves server-side (browser-independent)
+- Work order creation within 1-2s of BPA approval

@@ -58,6 +58,7 @@ HISTORY_MAXLEN   = 50
 # Topics for notification events (agent subscribes to these)
 NOTIFICATION_APPROVED_TOPIC = "factory/line-A/+/notification/approved"
 NOTIFICATION_REJECTED_TOPIC = "factory/line-A/+/notification/rejected"
+CONTROL_TOPIC = "factory/line-A/control/+/+"
 
 # CloudEvents configuration
 CLOUDEVENTS_SOURCE = os.getenv("CLOUDEVENTS_SOURCE", "urn:com:factory:line-A:mcp-server")
@@ -85,6 +86,9 @@ events_lock = threading.Lock()
 # MQTT client reference for publishing
 mqtt_client: mqtt.Client | None = None
 
+# Demo state - set by control events from dashboard
+demo_active = False
+
 # ── MQTT helpers ──────────────────────────────────────────────────────────────
 
 def _on_connect(client, userdata, flags, rc, properties=None):
@@ -98,6 +102,9 @@ def _on_connect(client, userdata, flags, rc, properties=None):
         client.subscribe(NOTIFICATION_REJECTED_TOPIC, qos=1)
         log.info("Subscribed to notification events: %s, %s", 
                  NOTIFICATION_APPROVED_TOPIC, NOTIFICATION_REJECTED_TOPIC)
+        # Subscribe to demo control events to track demo state
+        client.subscribe(CONTROL_TOPIC, qos=1)
+        log.info("Subscribed to control events: %s", CONTROL_TOPIC)
     else:
         log.error("MQTT connection failed — rc=%s", rc)
 
@@ -107,10 +114,27 @@ def _on_disconnect(client, userdata, rc, properties=None, reason=None):
 
 
 def _on_message(client, userdata, msg):
-    """Parse incoming messages - sensor data or notification events."""
+    """Parse incoming messages - sensor data, notification events, or control events."""
+    global demo_active
     try:
         payload = json.loads(msg.payload.decode("utf-8"))
         topic_parts = msg.topic.split("/")
+
+        # Control events: factory/line-A/control/{category}/{action}
+        # parts: [factory, line-A, control, demo, start] -> parts[2]=control, parts[3]=demo, parts[4]=start
+        if len(topic_parts) >= 5 and topic_parts[2] == "control":
+            cat = topic_parts[3]   # "demo" or "anomaly"
+            act = topic_parts[4]   # "start", "stop", "reset", "trigger"
+            
+            if cat == "demo" and act == "start":
+                demo_active = True
+                log.info("Demo STARTED - sensor monitoring active")
+            elif cat == "demo" and act in ("stop", "reset"):
+                demo_active = False
+                with history_lock:
+                    sensor_history.clear()
+                log.info("Demo %s - sensor buffer cleared, monitoring paused", act.upper())
+            return
         
         # Topic structure: factory/line-A/{machine_id}/notification/{approved|rejected}
         # Index:              0       1        2            3             4
@@ -447,6 +471,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
     # ── get_sensor_readings ───────────────────────────────────────────────────
     if name == "get_sensor_readings":
+        # If demo hasn't started, return a clear message so the LLM doesn't evaluate stale data
+        if not demo_active:
+            return [types.TextContent(
+                type="text",
+                text=json.dumps({
+                    "status": "DEMO_NOT_ACTIVE",
+                    "message": "The demo has not been started yet. No sensor monitoring is needed. "
+                               "Wait for the presenter to click Start Demo on the dashboard.",
+                }),
+            )]
+
         machine_id = arguments.get("machine_id")
 
         with history_lock:

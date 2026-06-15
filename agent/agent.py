@@ -175,7 +175,9 @@ Next Check: 60 seconds
 ═══════════════════════════════════════════════════════════════
 ```
 
-Remember: You are autonomous. Create notifications and work orders following the SAP PM process. BPA handles human approval for notifications before work orders are created."""
+Remember: You are autonomous. Create notifications and work orders following the SAP PM process. BPA handles human approval for notifications before work orders are created.
+
+IMPORTANT: If get_sensor_readings returns status "DEMO_NOT_ACTIVE", the demo has not been started by the presenter yet. In this case, respond with a brief "Demo not active, standing by" message and END your turn immediately. Do NOT call any other tools. Do NOT create any notifications. Just wait."""
 
 
 class MaintenanceAgent:

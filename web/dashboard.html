@@ -450,6 +450,21 @@
       0% { background: rgba(10, 110, 209, 0.25); }
       100% { background: rgba(10, 110, 209, 0); }
     }
+
+    @keyframes lingerNotification {
+      0% { background: rgba(233, 115, 12, 0.25); }
+      100% { background: rgba(233, 115, 12, 0); }
+    }
+
+    @keyframes lingerApproval {
+      0% { background: rgba(16, 126, 62, 0.25); }
+      100% { background: rgba(16, 126, 62, 0); }
+    }
+
+    @keyframes lingerWorkOrder {
+      0% { background: rgba(124, 58, 237, 0.3); }
+      100% { background: rgba(124, 58, 237, 0); }
+    }
     
     /* Different colors for different event types */
     @keyframes blinkNotification {
@@ -501,7 +516,7 @@
     }
     
     .stage-item.blink-notification {
-      animation: blinkNotification 0.4s ease-in-out 5;
+      animation: blinkNotification 0.4s ease-in-out 5, lingerNotification 5s ease-out 2s 1 forwards;
       border-radius: 12px;
       margin: -8px;
       padding: 8px;
@@ -514,7 +529,7 @@
     }
     
     .stage-item.blink-approval {
-      animation: blinkApproval 0.4s ease-in-out 5;
+      animation: blinkApproval 0.4s ease-in-out 5, lingerApproval 5s ease-out 2s 1 forwards;
       border-radius: 12px;
       margin: -8px;
       padding: 8px;
@@ -527,7 +542,7 @@
     }
     
     .stage-item.blink-workorder {
-      animation: blinkWorkOrder 0.4s ease-in-out 5;
+      animation: blinkWorkOrder 0.4s ease-in-out 5, lingerWorkOrder 5s ease-out 2s 1 forwards;
       border-radius: 12px;
       margin: -8px;
       padding: 8px;

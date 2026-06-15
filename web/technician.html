@@ -366,13 +366,19 @@
       CONFIG.SOLACE_PASSWORD = params.get('pass') || localStorage.getItem('solace_password') || '';
       // Round ID baked into the QR URL — lets us skip waiting for the qr-shown event
       CONFIG.ROUND_ID        = params.get('round') || null;
+      CONFIG.SLOT            = params.get('slot')  || 'line-A';
     }
 
-    const TOPIC_QR_SHOWN        = 'factory/line-A/dispatch/qr-shown';
-    const TOPIC_AVAILABILITY    = 'factory/line-A/dispatch/availability';
-    const TOPIC_ASSIGNMENT      = 'factory/line-A/dispatch/assignment';
-    const TOPIC_POOL_UPDATE     = 'factory/line-A/dispatch/pool-update';
-    const TOPIC_DEMO_RESET      = 'factory/line-A/control/demo/reset';
+    let TOPIC_QR_SHOWN, TOPIC_AVAILABILITY, TOPIC_ASSIGNMENT, TOPIC_POOL_UPDATE, TOPIC_DEMO_RESET;
+
+    function initTopics() {
+      const s = CONFIG.SLOT;
+      TOPIC_QR_SHOWN     = `factory/${s}/dispatch/qr-shown`;
+      TOPIC_AVAILABILITY = `factory/${s}/dispatch/availability`;
+      TOPIC_ASSIGNMENT   = `factory/${s}/dispatch/assignment`;
+      TOPIC_POOL_UPDATE  = `factory/${s}/dispatch/pool-update`;
+      TOPIC_DEMO_RESET   = `factory/${s}/control/demo/reset`;
+    }
 
     let session = null;
     let aemConnected = false;
@@ -447,6 +453,7 @@
 
     function connect() {
       loadConfig();
+      initTopics();
       if (!CONFIG.SOLACE_HOST) {
         setConnStatus(false, 'AEM credentials missing - open dashboard first');
         return;
@@ -584,7 +591,7 @@
       const payload = {
         specversion: '1.0',
         type: 'com.factory.dispatch.availability.v1',
-        source: 'urn:com:factory:line-A:technician:' + techId,
+        source: 'urn:com:factory:' + CONFIG.SLOT + ':technician:' + techId,
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         time: new Date().toISOString(),
         datacontenttype: 'application/json',

@@ -1,0 +1,20 @@
+[Unit]
+Description=SAP PM Demo - Multi-Tenant Dispatch Arbitrator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/sap/ai/pm-demo/services
+EnvironmentFile=/home/ubuntu/sap/ai/pm-demo/agent/.env
+ExecStart=/home/ubuntu/sap/ai/pm-demo/agent/.venv/bin/python dispatch_arbitrator.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pm-arbitrator
+
+[Install]
+WantedBy=multi-user.target

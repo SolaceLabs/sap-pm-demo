@@ -1,0 +1,21 @@
+[Unit]
+Description=SAP PM Demo - Multi-Tenant Maintenance Agent
+After=network-online.target pm-simulator.service
+Wants=network-online.target
+Requires=pm-simulator.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/sap/ai/pm-demo/agent
+EnvironmentFile=/home/ubuntu/sap/ai/pm-demo/agent/.env
+ExecStart=/home/ubuntu/sap/ai/pm-demo/agent/.venv/bin/python agent.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pm-agent
+
+[Install]
+WantedBy=multi-user.target

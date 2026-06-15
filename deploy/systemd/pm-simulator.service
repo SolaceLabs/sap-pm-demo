@@ -1,0 +1,20 @@
+[Unit]
+Description=SAP PM Demo - Multi-Tenant Sensor Simulator
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/sap/ai/pm-demo/agent
+EnvironmentFile=/home/ubuntu/sap/ai/pm-demo/agent/.env
+ExecStart=/home/ubuntu/sap/ai/pm-demo/agent/.venv/bin/python simulator/sensor_sim.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=pm-simulator
+
+[Install]
+WantedBy=multi-user.target

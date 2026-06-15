@@ -1546,6 +1546,7 @@
       <div class="demo-controls-header">
         <div class="demo-controls-title">
           🎬 Demo Controls
+          <span id="slot-badge" style="background: rgba(255,255,255,0.15); padding: 3px 10px; border-radius: 10px; font-size: 12px; font-weight: 500; margin-left: 8px; letter-spacing: 0.3px;"></span>
           <span class="demo-status-badge" id="demo-status-badge">
             <span class="status-pulse"></span>
             <span id="demo-status-text">NOT CONNECTED</span>
@@ -1556,6 +1557,12 @@
         </div>
       </div>
       <div class="demo-buttons">
+        <div style="display: flex; align-items: center; gap: 8px; width: 100%; margin-bottom: 8px;">
+          <label style="font-size: 13px; color: rgba(255,255,255,0.8); white-space: nowrap;">Your Name:</label>
+          <input type="text" id="se-name-input" placeholder="e.g. sumeet"
+            style="flex: 1; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.1); color: white; font-size: 14px; font-weight: 600; outline: none;"
+            oninput="updateSlotFromName()" />
+        </div>
         <button class="demo-btn demo-btn-start" id="btn-start-demo" onclick="startDemo()" disabled>
           ▶ Start Demo
         </button>
@@ -1642,7 +1649,7 @@
             <div class="stage-icon">1</div>
             <div class="stage-content">
               <h3>Sensor Data Collection</h3>
-              <p>factory/line-A/+/sensors</p>
+              <p>factory/{slot}/+/sensors</p>
               <div class="stage-time" id="stage-1-time"></div>
             </div>
           </div>
@@ -1658,7 +1665,7 @@
             <div class="stage-icon">3</div>
             <div class="stage-content">
               <h3>PM Notification Created</h3>
-              <p>factory/line-A/+/notification/pending</p>
+              <p>factory/{slot}/+/notification/pending</p>
               <div class="stage-time" id="stage-3-time"></div>
             </div>
           </div>
@@ -1674,7 +1681,7 @@
             <div class="stage-icon">5</div>
             <div class="stage-content">
               <h3>Approval Decision</h3>
-              <p>factory/line-A/+/notification/approved</p>
+              <p>factory/{slot}/+/notification/approved</p>
               <div class="stage-time" id="stage-5-time"></div>
             </div>
           </div>
@@ -1682,7 +1689,7 @@
             <div class="stage-icon">6</div>
             <div class="stage-content">
               <h3>PM Work Order Created</h3>
-              <p>factory/line-A/+/workorder/created</p>
+              <p>factory/{slot}/+/workorder/created</p>
               <div class="stage-time" id="stage-6-time"></div>
             </div>
           </div>
@@ -1858,16 +1865,19 @@
       SOLACE_PASSWORD: 'YOUR_PASSWORD_HERE'
     };
 
-    // Topics to subscribe to (these match your architecture)
+    // Read demo slot from URL params or prompt for name
+    let DEMO_SLOT = new URLSearchParams(window.location.search).get('slot') || '';
+
+    // Topics to subscribe to (parameterized by DEMO_SLOT)
     const TOPICS = [
-      'factory/line-A/*/sensors',              // Sensor data from simulator
-      'factory/line-A/*/notification/pending', // PM Notifications from agent
-      'factory/line-A/*/notification/approved',// Approvals from BPA
-      'factory/line-A/*/notification/rejected',// Rejections from BPA
-      'factory/line-A/*/workorder/created',    // Work orders from agent
-      'factory/line-A/control/demo/state',     // Demo state broadcasts from simulator
-      'factory/line-A/dispatch/pool-update',   // Pool size updates from arbitrator
-      'factory/line-A/dispatch/assignment'     // Winner announcement from arbitrator
+      `factory/${DEMO_SLOT}/*/sensors`,              // Sensor data from simulator
+      `factory/${DEMO_SLOT}/*/notification/pending`, // PM Notifications from agent
+      `factory/${DEMO_SLOT}/*/notification/approved`,// Approvals from BPA
+      `factory/${DEMO_SLOT}/*/notification/rejected`,// Rejections from BPA
+      `factory/${DEMO_SLOT}/*/workorder/created`,    // Work orders from agent
+      `factory/${DEMO_SLOT}/control/demo/state`,     // Demo state broadcasts from simulator
+      `factory/${DEMO_SLOT}/dispatch/pool-update`,   // Pool size updates from arbitrator
+      `factory/${DEMO_SLOT}/dispatch/assignment`      // Winner announcement from arbitrator
     ];
 
     // ============================================================
@@ -1901,6 +1911,12 @@
 
     // Pre-fill form if CONFIG has non-placeholder values
     window.addEventListener('DOMContentLoaded', () => {
+      // Show which slot this dashboard is connected to
+      if (DEMO_SLOT) {
+        document.getElementById('slot-badge').textContent = DEMO_SLOT;
+        document.getElementById('se-name-input').value = DEMO_SLOT;
+      }
+
       if (CONFIG.SOLACE_HOST && !CONFIG.SOLACE_HOST.includes('YOUR_')) {
         document.getElementById('solace-host').value = CONFIG.SOLACE_HOST;
       }
@@ -2046,11 +2062,11 @@
         log('error', 'Cannot send control event - not connected to AEM');
         return false;
       }
-      const topic = `factory/line-A/control/${category}/${action}`;
+      const topic = `factory/${DEMO_SLOT}/control/${category}/${action}`;
       const payload = {
         specversion: '1.0',
         type: `com.factory.control.${category}.${action}.v1`,
-        source: 'urn:com:factory:line-A:dashboard',
+        source: 'urn:com:factory:' + DEMO_SLOT + ':dashboard',
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         time: new Date().toISOString(),
         datacontenttype: 'application/json',
@@ -2073,7 +2089,24 @@
       }
     }
 
+    function updateSlotFromName() {
+      const input = document.getElementById('se-name-input');
+      const name = input.value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+      if (name) {
+        DEMO_SLOT = name;
+        document.getElementById('slot-badge').textContent = name;
+      }
+    }
+
     function startDemo() {
+      if (!DEMO_SLOT) {
+        showToast('Enter your name first', 'warning');
+        document.getElementById('se-name-input').focus();
+        return;
+      }
+
+      // Lock the name input once demo starts
+      document.getElementById('se-name-input').disabled = true;
       // Generate session ID
       demoState.sessionId = (crypto.randomUUID ? crypto.randomUUID().slice(0, 8) : String(Date.now()).slice(-8));
       demoState.status = 'ACTIVE';
@@ -2130,6 +2163,7 @@
       hideWinnerBanner();
       clearDashboardState();
       updateDemoUI();
+      document.getElementById('se-name-input').disabled = false;
       showToast('Demo reset to clean state', 'info');
       log('info', '🔄 Demo reset (state cleared)');
     }
@@ -2171,7 +2205,7 @@
 
       // Build URL using the current origin so it works on both EC2-direct and CloudFront
       const base = window.location.origin + '/sap-pm-demo/technician';
-      const url  = base + '?host=' + host + '&vpn=' + vpn + '&user=' + user + '&pass=' + pass + '&round=' + encodeURIComponent(dispatchRoundId);
+      const url  = base + '?host=' + host + '&vpn=' + vpn + '&user=' + user + '&pass=' + pass + '&round=' + encodeURIComponent(dispatchRoundId) + '&slot=' + encodeURIComponent(DEMO_SLOT);
 
       // Generate QR code
       try {
@@ -2198,16 +2232,16 @@
     }
 
     function publishDispatchEvent(action, data) {
-      // Dispatch topics live at factory/line-A/dispatch/{action}, NOT under control/
+      // Dispatch topics live at factory/{DEMO_SLOT}/dispatch/{action}, NOT under control/
       if (!session || !aemConnected) {
         log('error', 'Cannot send dispatch event - not connected to AEM');
         return false;
       }
-      const topic = 'factory/line-A/dispatch/' + action;
+      const topic = `factory/${DEMO_SLOT}/dispatch/` + action;
       const payload = {
         specversion: '1.0',
         type: 'com.factory.dispatch.' + action + '.v1',
-        source: 'urn:com:factory:line-A:dashboard',
+        source: 'urn:com:factory:' + DEMO_SLOT + ':dashboard',
         id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
         time: new Date().toISOString(),
         datacontenttype: 'application/json',

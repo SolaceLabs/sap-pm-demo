@@ -177,7 +177,9 @@ Next Check: 60 seconds
 
 Remember: You are autonomous. Create notifications and work orders following the SAP PM process. BPA handles human approval for notifications before work orders are created.
 
-IMPORTANT: If get_sensor_readings returns status "DEMO_NOT_ACTIVE", the demo has not been started by the presenter yet. In this case, respond with a brief "Demo not active, standing by" message and END your turn immediately. Do NOT call any other tools. Do NOT create any notifications. Just wait."""
+IMPORTANT: If get_sensor_readings returns status "DEMO_NOT_ACTIVE", the demo has not been started by the presenter yet. In this case, respond with a brief "Demo not active, standing by" message and END your turn immediately. Do NOT call any other tools. Do NOT create any notifications. Just wait.
+
+CRITICAL: You will be told which namespace (SE name) you are monitoring. ALWAYS pass that namespace in EVERY tool call as the 'namespace' parameter. For example: get_sensor_readings(namespace="sumeet"), create_notification(namespace="sumeet", ...)."""
 
 
 class MaintenanceAgent:
@@ -336,8 +338,18 @@ class MaintenanceAgent:
         except json.JSONDecodeError:
             pass
 
-    async def run_maintenance_cycle(self) -> str:
-        """Run a single maintenance check cycle with full tool use loop."""
+    async def discover_namespaces(self) -> list[str]:
+        """Call list_active_namespaces to discover which SEs have active demos."""
+        try:
+            result_str = await self.execute_tool("list_active_namespaces", {})
+            result = json.loads(result_str)
+            return result.get("active_namespaces", [])
+        except Exception as e:
+            log.warning("Failed to discover namespaces: %s", e)
+            return []
+
+    async def run_maintenance_cycle(self, namespace: str) -> str:
+        """Run a single maintenance check cycle for a specific namespace (SE)."""
         self.cycle_count += 1
         
         # Display cycle header
@@ -345,11 +357,12 @@ class MaintenanceAgent:
         table.add_column("Info", style="cyan")
         table.add_column("Value", style="white")
         table.add_row("Cycle", str(self.cycle_count))
+        table.add_row("Namespace", namespace)
         table.add_row("Time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         table.add_row("Model", LLM_MODEL)
         table.add_row("Pending Notifications", str(len(self.pending_notifications)))
         
-        console.print(Panel(table, title="🔄 SAP PM Maintenance Cycle", border_style="blue"))
+        console.print(Panel(table, title=f"🔄 SAP PM Cycle [{namespace}]", border_style="blue"))
         
         # Build context about pending notifications for the LLM
         pending_context = ""
@@ -360,7 +373,7 @@ class MaintenanceAgent:
         
         messages = [
             {"role": "system", "content": SYSTEM_PROMPT},
-            {"role": "user", "content": f"Perform a SAP PM maintenance cycle. First check for notification approval events, then analyze sensors, and take appropriate action following the SAP PM process.{pending_context}"},
+            {"role": "user", "content": f"You are monitoring namespace '{namespace}'. Perform a SAP PM maintenance cycle. First check for notification approval events (namespace='{namespace}'), then analyze sensors (namespace='{namespace}'), and take appropriate action following the SAP PM process. ALWAYS pass namespace='{namespace}' to every tool call.{pending_context}"},
         ]
         
         iteration = 0
@@ -472,7 +485,14 @@ class MaintenanceAgent:
         try:
             while self.running:
                 try:
-                    await self.run_maintenance_cycle()
+                    # Discover active namespaces
+                    namespaces = await self.discover_namespaces()
+                    if namespaces:
+                        console.print(f"[bold cyan]Active namespaces: {', '.join(namespaces)}[/bold cyan]")
+                        for ns in namespaces:
+                            await self.run_maintenance_cycle(ns)
+                    else:
+                        console.print("[dim]No active demos. Waiting...[/dim]")
                 except Exception as e:
                     console.print(f"[red]Error in maintenance cycle: {e}[/red]")
                 

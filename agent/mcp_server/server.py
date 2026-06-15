@@ -52,30 +52,35 @@ SOLACE_PASSWORD = os.getenv("SOLACE_PASSWORD", "admin")
 SOLACE_CA_CERT  = os.getenv("SOLACE_CA_CERT",  None)
 
 USE_TLS          = SOLACE_PORT != 1883
-SUBSCRIBE_TOPIC  = "factory/line-A/+/sensors"
 HISTORY_MAXLEN   = 50
 
+# Demo slot for multi-tenant isolation
+# Multi-tenant: no DEMO_SLOT needed, we use wildcard subscriptions
+
+# Topics (wildcard for multi-tenant)
+SUBSCRIBE_TOPIC  = "factory/+/+/sensors"
+
 # Topics for notification events (agent subscribes to these)
-NOTIFICATION_APPROVED_TOPIC = "factory/line-A/+/notification/approved"
-NOTIFICATION_REJECTED_TOPIC = "factory/line-A/+/notification/rejected"
-CONTROL_TOPIC = "factory/line-A/control/+/+"
+NOTIFICATION_APPROVED_TOPIC = "factory/+/+/notification/approved"
+NOTIFICATION_REJECTED_TOPIC = "factory/+/+/notification/rejected"
+CONTROL_TOPIC = "factory/+/control/+/+"
 
 # CloudEvents configuration
-CLOUDEVENTS_SOURCE = os.getenv("CLOUDEVENTS_SOURCE", "urn:com:factory:line-A:mcp-server")
+CLOUDEVENTS_SOURCE_BASE = "urn:com:factory"
 CLOUDEVENTS_TYPE_NOTIFICATION = "com.factory.pm.notification.pending.v1"
 CLOUDEVENTS_TYPE_WORKORDER = "com.factory.pm.workorder.created.v1"
 
 # ── In-memory state ───────────────────────────────────────────────────────────
 
-# { machine_id: deque(maxlen=50) of reading dicts }
-sensor_history: dict[str, deque] = {}
+# { namespace: { machine_id: deque(maxlen=50) } }
+sensor_history: dict[str, dict] = {}
 history_lock = threading.Lock()
 
-# { notification_id: notification_dict }
+# { namespace: { notification_id: notification_dict } }
 notifications: dict[str, dict] = {}
 notifications_lock = threading.Lock()
 
-# { work_order_id: work_order_dict }
+# { namespace: { work_order_id: work_order_dict } }
 work_orders: dict[str, dict] = {}
 workorders_lock = threading.Lock()
 
@@ -86,8 +91,8 @@ events_lock = threading.Lock()
 # MQTT client reference for publishing
 mqtt_client: mqtt.Client | None = None
 
-# Demo state - set by control events from dashboard
-demo_active = False
+# Demo state per namespace
+demo_active: dict[str, bool] = {}
 
 # ── MQTT helpers ──────────────────────────────────────────────────────────────
 
@@ -114,73 +119,80 @@ def _on_disconnect(client, userdata, rc, properties=None, reason=None):
 
 
 def _on_message(client, userdata, msg):
-    """Parse incoming messages - sensor data, notification events, or control events."""
-    global demo_active
+    """Parse incoming messages - sensor data, notification events, or control events.
+    All topics follow factory/{namespace}/... so parts[1] is always the namespace."""
     try:
         payload = json.loads(msg.payload.decode("utf-8"))
         topic_parts = msg.topic.split("/")
-
-        # Control events: factory/line-A/control/{category}/{action}
-        # parts: [factory, line-A, control, demo, start] -> parts[2]=control, parts[3]=demo, parts[4]=start
-        if len(topic_parts) >= 5 and topic_parts[2] == "control":
-            cat = topic_parts[3]   # "demo" or "anomaly"
-            act = topic_parts[4]   # "start", "stop", "reset", "trigger"
-            
-            if cat == "demo" and act == "start":
-                demo_active = True
-                log.info("Demo STARTED - sensor monitoring active")
-            elif cat == "demo" and act in ("stop", "reset"):
-                demo_active = False
-                with history_lock:
-                    sensor_history.clear()
-                log.info("Demo %s - sensor buffer cleared, monitoring paused", act.upper())
+        if len(topic_parts) < 4:
             return
-        
-        # Topic structure: factory/line-A/{machine_id}/notification/{approved|rejected}
-        # Index:              0       1        2            3             4
+
+        namespace = topic_parts[1]  # SE name / demo slot
+
+        # Control events: factory/{ns}/control/{category}/{action}
+        if len(topic_parts) >= 5 and topic_parts[2] == "control":
+            cat = topic_parts[3]
+            act = topic_parts[4]
+
+            if cat == "demo" and act == "start":
+                demo_active[namespace] = True
+                log.info("[%s] Demo STARTED", namespace)
+            elif cat == "demo" and act in ("stop", "reset"):
+                demo_active[namespace] = False
+                with history_lock:
+                    sensor_history.pop(namespace, None)
+                with notifications_lock:
+                    if act == "reset":
+                        notifications.pop(namespace, None)
+                with workorders_lock:
+                    if act == "reset":
+                        work_orders.pop(namespace, None)
+                log.info("[%s] Demo %s - buffers cleared", namespace, act.upper())
+            return
+
+        # Notification events: factory/{ns}/{machine_id}/notification/{approved|rejected}
         if len(topic_parts) >= 5 and topic_parts[3] == "notification":
-            event_type = topic_parts[4]  # "approved" or "rejected"
+            event_type = topic_parts[4]
             machine_id = topic_parts[2]
-            
-            # Handle CloudEvents structured format (payload might be in "data" field)
             actual_payload = payload.get("data", payload)
-            
+
             event = {
                 "event_id": f"EVT-{uuid.uuid4().hex[:8].upper()}",
                 "event_type": event_type,
+                "namespace": namespace,
                 "machine_id": machine_id,
                 "notification_id": actual_payload.get("notification_id"),
                 "payload": actual_payload,
                 "received_at": datetime.now(timezone.utc).isoformat(),
                 "processed": False,
             }
-            
+
             with events_lock:
                 notification_events.append(event)
-            
-            log.info("Received notification %s event for %s: %s", 
-                     event_type, machine_id, actual_payload.get("notification_id"))
-            
-            # Update notification status if we have it
+
+            log.info("[%s] Notification %s for %s: %s",
+                     namespace, event_type, machine_id, actual_payload.get("notification_id"))
+
             notification_id = actual_payload.get("notification_id")
             if notification_id:
                 with notifications_lock:
-                    if notification_id in notifications:
-                        notifications[notification_id]["status"] = event_type
-                        log.info("Updated notification %s status to %s", 
-                                 notification_id, event_type)
+                    ns_notifs = notifications.get(namespace, {})
+                    if notification_id in ns_notifs:
+                        ns_notifs[notification_id]["status"] = event_type
+                        log.info("[%s] Updated notification %s → %s",
+                                 namespace, notification_id, event_type)
             return
-        
-        # Otherwise, it's sensor data
+
+        # Sensor data: factory/{ns}/{machine_id}/sensors
         machine_id = payload.get("machine_id") or topic_parts[2]
-
         with history_lock:
-            if machine_id not in sensor_history:
-                sensor_history[machine_id] = deque(maxlen=HISTORY_MAXLEN)
-            sensor_history[machine_id].append(payload)
+            if namespace not in sensor_history:
+                sensor_history[namespace] = {}
+            if machine_id not in sensor_history[namespace]:
+                sensor_history[namespace][machine_id] = deque(maxlen=HISTORY_MAXLEN)
+            sensor_history[namespace][machine_id].append(payload)
 
-        log.debug("Buffered reading for %s (buffer size=%d)",
-                  machine_id, len(sensor_history[machine_id]))
+        log.debug("[%s] Buffered reading for %s", namespace, machine_id)
     except Exception as exc:
         log.error("Failed to process message on %s: %s", msg.topic, exc)
 
@@ -190,7 +202,7 @@ def start_mqtt_listener() -> mqtt.Client:
     global mqtt_client
     
     client = mqtt.Client(
-        client_id="mfg-mcp-server-agent",  # Fixed client ID for persistent sessions
+        client_id="mcp-server-multi",  # Fixed client ID for persistent sessions
         protocol=mqtt.MQTTv5,
     )
     client.username_pw_set(SOLACE_USERNAME, SOLACE_PASSWORD)
@@ -270,7 +282,7 @@ async def list_tools() -> list[types.Tool]:
             name="get_sensor_readings",
             description=(
                 "Return the most recent sensor reading for one or all machines on "
-                "factory line-A. Sensors reported: temperature (°C), vibration (mm/s), "
+                "the factory. Sensors reported: temperature (°C), vibration (mm/s), "
                 "pressure (bar), motor_current (A). Also includes a drift_factor for "
                 "machine-02 when a bearing-failure anomaly is active (0.0 = normal, "
                 "1.0 = full failure)."
@@ -278,6 +290,10 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "namespace": {
+                        "type": "string",
+                        "description": "The SE/demo namespace (e.g. 'sumeet', 'demo-1'). Determines which topic namespace to read/write.",
+                    },
                     "machine_id": {
                         "type": "string",
                         "description": (
@@ -286,7 +302,7 @@ async def list_tools() -> list[types.Tool]:
                         ),
                     }
                 },
-                "required": [],
+                "required": ["namespace"],
             },
         ),
         types.Tool(
@@ -299,6 +315,10 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "namespace": {
+                        "type": "string",
+                        "description": "The SE/demo namespace (e.g. 'sumeet', 'demo-1'). Determines which topic namespace to read/write.",
+                    },
                     "machine_id": {
                         "type": "string",
                         "description": "Required. One of: machine-01, machine-02, machine-03.",
@@ -311,7 +331,7 @@ async def list_tools() -> list[types.Tool]:
                         "default": 10,
                     },
                 },
-                "required": ["machine_id"],
+                "required": ["namespace", "machine_id"],
             },
         ),
         types.Tool(
@@ -326,6 +346,10 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "namespace": {
+                        "type": "string",
+                        "description": "The SE/demo namespace (e.g. 'sumeet', 'demo-1'). Determines which topic namespace to read/write.",
+                    },
                     "equipment_id": {
                         "type": "string",
                         "description": "The equipment/machine ID (e.g. machine-02). Maps to SAP Equipment.",
@@ -373,7 +397,7 @@ async def list_tools() -> list[types.Tool]:
                         "description": "Who/what reported the issue. Use 'AI-MAINT-AGENT' for autonomous detection.",
                     },
                 },
-                "required": ["equipment_id", "notification_type", "priority", "short_text", "long_text"],
+                "required": ["namespace", "equipment_id", "notification_type", "priority", "short_text", "long_text"],
             },
         ),
         types.Tool(
@@ -387,6 +411,10 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "namespace": {
+                        "type": "string",
+                        "description": "The SE/demo namespace (e.g. 'sumeet', 'demo-1'). Determines which topic namespace to read/write.",
+                    },
                     "notification_id": {
                         "type": "string",
                         "description": "The approved notification ID this work order is based on.",
@@ -436,7 +464,7 @@ async def list_tools() -> list[types.Tool]:
                         "description": "Planned end date/time for the work.",
                     },
                 },
-                "required": ["notification_id", "equipment_id", "order_type", "priority", "short_text"],
+                "required": ["namespace", "notification_id", "equipment_id", "order_type", "priority", "short_text"],
             },
         ),
         types.Tool(
@@ -450,6 +478,10 @@ async def list_tools() -> list[types.Tool]:
             inputSchema={
                 "type": "object",
                 "properties": {
+                    "namespace": {
+                        "type": "string",
+                        "description": "The SE/demo namespace (e.g. 'sumeet', 'demo-1'). Determines which topic namespace to read/write.",
+                    },
                     "machine_id": {
                         "type": "string",
                         "description": "Optional. Filter events for a specific machine.",
@@ -460,6 +492,18 @@ async def list_tools() -> list[types.Tool]:
                         "default": True,
                     },
                 },
+                "required": ["namespace"],
+            },
+        ),
+        types.Tool(
+            name="list_active_namespaces",
+            description=(
+                "List all currently active demo namespaces (SEs with running demos). "
+                "Call this first each cycle to discover which namespaces need monitoring."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {},
                 "required": [],
             },
         ),
@@ -471,60 +515,50 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
     # ── get_sensor_readings ───────────────────────────────────────────────────
     if name == "get_sensor_readings":
-        # If demo hasn't started, return a clear message so the LLM doesn't evaluate stale data
-        if not demo_active:
+        namespace = arguments.get("namespace", "")
+        if not demo_active.get(namespace, False):
             return [types.TextContent(
                 type="text",
                 text=json.dumps({
                     "status": "DEMO_NOT_ACTIVE",
-                    "message": "The demo has not been started yet. No sensor monitoring is needed. "
-                               "Wait for the presenter to click Start Demo on the dashboard.",
+                    "namespace": namespace,
+                    "message": f"No active demo for namespace '{namespace}'. "
+                               "Wait for the presenter to click Start Demo.",
                 }),
             )]
 
         machine_id = arguments.get("machine_id")
-
         with history_lock:
+            ns_data = sensor_history.get(namespace, {})
             if machine_id:
-                if machine_id not in sensor_history or not sensor_history[machine_id]:
+                if machine_id not in ns_data or not ns_data[machine_id]:
                     return [types.TextContent(
                         type="text",
-                        text=json.dumps({
-                            "error": f"No data available for '{machine_id}'. "
-                                     "Is the simulator running?",
-                        }),
+                        text=json.dumps({"error": f"No data for '{machine_id}' in namespace '{namespace}'."}),
                     )]
-                result = {machine_id: sensor_history[machine_id][-1]}
+                result = {machine_id: ns_data[machine_id][-1]}
             else:
-                if not sensor_history:
+                if not ns_data:
                     return [types.TextContent(
                         type="text",
-                        text=json.dumps({
-                            "error": "No sensor data buffered yet. "
-                                     "Is the simulator running and connected?",
-                        }),
+                        text=json.dumps({"error": f"No sensor data buffered for namespace '{namespace}'."}),
                     )]
-                result = {
-                    mid: list(buf)[-1]
-                    for mid, buf in sensor_history.items()
-                    if buf
-                }
+                result = {mid: list(buf)[-1] for mid, buf in ns_data.items() if buf}
 
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
     # ── get_sensor_history ────────────────────────────────────────────────────
     elif name == "get_sensor_history":
+        namespace  = arguments.get("namespace", "")
         machine_id = arguments.get("machine_id")
         limit      = min(int(arguments.get("limit", 10)), HISTORY_MAXLEN)
 
         if not machine_id:
-            return [types.TextContent(
-                type="text",
-                text=json.dumps({"error": "machine_id is required."}),
-            )]
+            return [types.TextContent(type="text", text=json.dumps({"error": "machine_id is required."}))]
 
         with history_lock:
-            buf = sensor_history.get(machine_id)
+            ns_data = sensor_history.get(namespace, {})
+            buf = ns_data.get(machine_id)
             if not buf:
                 return [types.TextContent(
                     type="text",
@@ -545,6 +579,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
     # ── create_notification ───────────────────────────────────────────────────
     elif name == "create_notification":
+        namespace = arguments.get("namespace", "")
         required = ["equipment_id", "notification_type", "priority", "short_text", "long_text"]
         missing  = [f for f in required if not arguments.get(f)]
         if missing:
@@ -578,22 +613,24 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
         # Store locally
         with notifications_lock:
-            notifications[notification_id] = notification_data.copy()
+            if namespace not in notifications:
+                notifications[namespace] = {}
+            notifications[namespace][notification_id] = notification_data.copy()
 
         # CloudEvents structured format
         cloudevent = {
             "specversion": "1.0",
             "type": CLOUDEVENTS_TYPE_NOTIFICATION,
-            "source": CLOUDEVENTS_SOURCE,
+            "source": f"{CLOUDEVENTS_SOURCE_BASE}:{namespace}:mcp-server",
             "id": str(uuid.uuid4()),
             "time": now.isoformat(),
             "datacontenttype": "application/json",
-            "subject": f"factory/line-A/{equipment_id}/notification/{notification_id}",
+            "subject": f"factory/{namespace}/{equipment_id}/notification/{notification_id}",
             "data": notification_data
         }
 
         # Publish to AEM
-        topic = f"factory/line-A/{equipment_id}/notification/pending"
+        topic = f"factory/{namespace}/{equipment_id}/notification/pending"
         published = publish_to_aem(topic, cloudevent)
 
         log.info(
@@ -677,28 +714,31 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
         # Store locally
         with workorders_lock:
-            work_orders[workorder_id] = workorder_data.copy()
+            if namespace not in work_orders:
+                work_orders[namespace] = {}
+            work_orders[namespace][workorder_id] = workorder_data.copy()
 
         # Update notification status
         with notifications_lock:
-            if notification_id in notifications:
-                notifications[notification_id]["work_order_id"] = workorder_id
-                notifications[notification_id]["status"] = "WORK_ORDER_CREATED"
+            ns_notifs = notifications.get(namespace, {})
+            if notification_id in ns_notifs:
+                ns_notifs[notification_id]["work_order_id"] = workorder_id
+                ns_notifs[notification_id]["status"] = "WORK_ORDER_CREATED"
 
         # CloudEvents structured format
         cloudevent = {
             "specversion": "1.0",
             "type": CLOUDEVENTS_TYPE_WORKORDER,
-            "source": CLOUDEVENTS_SOURCE,
+            "source": f"{CLOUDEVENTS_SOURCE_BASE}:{namespace}:mcp-server",
             "id": str(uuid.uuid4()),
             "time": now.isoformat(),
             "datacontenttype": "application/json",
-            "subject": f"factory/line-A/{equipment_id}/workorder/{workorder_id}",
+            "subject": f"factory/{namespace}/{equipment_id}/workorder/{workorder_id}",
             "data": workorder_data
         }
 
         # Publish work order created event to AEM
-        topic = f"factory/line-A/{equipment_id}/workorder/created"
+        topic = f"factory/{namespace}/{equipment_id}/workorder/created"
         published = publish_to_aem(topic, cloudevent)
 
         log.info(
@@ -737,6 +777,17 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
         }
         
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
+
+    # ── list_active_namespaces ─────────────────────────────────────────────────
+    elif name == "list_active_namespaces":
+        active = [ns for ns, active in demo_active.items() if active]
+        return [types.TextContent(
+            type="text",
+            text=json.dumps({
+                "active_namespaces": active,
+                "count": len(active),
+            }),
+        )]
 
     # ── Unknown tool ──────────────────────────────────────────────────────────
     else:

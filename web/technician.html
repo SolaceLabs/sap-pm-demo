@@ -504,7 +504,13 @@
       const topic = message.getDestination().getName();
       let payload = {};
       try {
-        payload = JSON.parse(message.getBinaryAttachment());
+        let payloadStr = message.getBinaryAttachment();
+        if (payloadStr instanceof ArrayBuffer || payloadStr instanceof Uint8Array) {
+          payloadStr = new TextDecoder().decode(payloadStr);
+        } else if (typeof payloadStr !== 'string') {
+          payloadStr = String(payloadStr);
+        }
+        payload = JSON.parse(payloadStr);
       } catch (e) {
         console.error('Bad payload:', e);
         return;

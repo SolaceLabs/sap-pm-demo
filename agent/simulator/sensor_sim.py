@@ -254,6 +254,13 @@ def main():
     log.info("Press Ctrl+C to stop")
 
     while running:
+        # Only publish sensor data when the demo is active.
+        # This prevents the agent from seeing data and creating
+        # spurious notifications before the SE clicks "Start Demo".
+        if not demo_state["active"]:
+            time.sleep(PUBLISH_INTERVAL_SEC)
+            continue
+
         for machine_id in MACHINES:
             reading = generate_reading(machine_id)
             topic = "factory/line-A/" + machine_id + "/sensors"

@@ -2446,7 +2446,15 @@
       let payload = {};
       
       try {
-        const payloadStr = message.getBinaryAttachment();
+        let payloadStr = message.getBinaryAttachment();
+        // MQTT-published messages arrive as bytes (Uint8Array/ArrayBuffer), not string
+        if (payloadStr instanceof ArrayBuffer) {
+          payloadStr = new TextDecoder().decode(payloadStr);
+        } else if (payloadStr instanceof Uint8Array) {
+          payloadStr = new TextDecoder().decode(payloadStr);
+        } else if (typeof payloadStr !== 'string') {
+          payloadStr = String(payloadStr);
+        }
         payload = JSON.parse(payloadStr);
         
         // Handle CloudEvents format (data might be nested)
@@ -2454,7 +2462,8 @@
           payload = { ...payload, ...payload.data };
         }
       } catch (e) {
-        payload = { raw: message.getBinaryAttachment() };
+        log('warn', 'Failed to parse message on ' + topic + ': ' + e.message);
+        payload = {};
       }
 
       // Determine event type from topic

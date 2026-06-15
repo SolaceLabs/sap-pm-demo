@@ -202,7 +202,7 @@ class MaintenanceAgent:
         console.print("\n[bold blue]🔌 Connecting to MCP Server...[/bold blue]")
         
         server_params = StdioServerParameters(
-            command="python",
+            command=sys.executable,
             args=[MCP_SERVER_PATH],
         )
         

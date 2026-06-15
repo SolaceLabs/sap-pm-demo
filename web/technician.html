@@ -364,6 +364,8 @@
       CONFIG.SOLACE_VPN      = params.get('vpn')  || localStorage.getItem('solace_vpn')  || '';
       CONFIG.SOLACE_USERNAME = params.get('user') || localStorage.getItem('solace_username') || '';
       CONFIG.SOLACE_PASSWORD = params.get('pass') || localStorage.getItem('solace_password') || '';
+      // Round ID baked into the QR URL — lets us skip waiting for the qr-shown event
+      CONFIG.ROUND_ID        = params.get('round') || null;
     }
 
     const TOPIC_QR_SHOWN        = 'factory/line-A/dispatch/qr-shown';
@@ -464,6 +466,12 @@
           aemConnected = true;
           setConnStatus(true, 'Connected · ' + techId);
           subscribeToTopics();
+          // If round_id was baked into the QR URL, go straight to AVAILABLE
+          // (the qr-shown event was published before we connected, so we'd miss it)
+          if (CONFIG.ROUND_ID) {
+            currentRoundId = CONFIG.ROUND_ID;
+            showState('available');
+          }
         });
 
         session.on(solace.SessionEventCode.CONNECT_FAILED_ERROR, (event) => {

@@ -2171,7 +2171,7 @@
 
       // Build URL using the current origin so it works on both EC2-direct and CloudFront
       const base = window.location.origin + '/sap-pm-demo/technician';
-      const url  = base + '?host=' + host + '&vpn=' + vpn + '&user=' + user + '&pass=' + pass;
+      const url  = base + '?host=' + host + '&vpn=' + vpn + '&user=' + user + '&pass=' + pass + '&round=' + encodeURIComponent(dispatchRoundId);
 
       // Generate QR code
       try {

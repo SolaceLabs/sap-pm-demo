@@ -599,6 +599,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
             "notification_id": notification_id,
             "notification_type": arguments["notification_type"],
             "equipment_id": equipment_id,
+            "se_name": namespace,
             "functional_location": arguments.get("functional_location", f"PLANT-A/LINE-A/{equipment_id.upper()}"),
             "priority": arguments["priority"],
             "short_text": arguments["short_text"][:40],  # SAP limit

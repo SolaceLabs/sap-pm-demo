@@ -2,18 +2,27 @@
   "asyncapi": "2.0.0",
   "info": {
     "title": "Factory Workorder Pending",
-    "version": "1.0",
+    "version": "2.0.0",
     "description": "This event is triggered by the Manufacturing MCP Agent when a critical maintenance issue is detected and a work order needs approval."
   },
   "x-api-type": "EVENT",
   "x-shortText": "Notifies subscribers when a maintenance work order requires approval.",
-  "x-stateInfo": { "state": "ACTIVE" },
+  "x-stateInfo": {
+    "state": "ACTIVE"
+  },
   "channels": {
-    "factory/line-A/{machineId}/workorder/pending": {
+    "factory/{seName}/{machineId}/workorder/pending": {
       "parameters": {
         "machineId": {
           "schema": {
             "type": "string"
+          }
+        },
+        "seName": {
+          "description": "The SE/demo session name (e.g. sumeet, giuseppe). Isolates each demo session.",
+          "schema": {
+            "type": "string",
+            "example": "sumeet"
           }
         }
       },
@@ -43,7 +52,11 @@
         "payload": {
           "$ref": "#/components/schemas/workorderPending"
         },
-        "traits": [{ "$ref": "#/components/messageTraits/CloudEventContext" }]
+        "traits": [
+          {
+            "$ref": "#/components/messageTraits/CloudEventContext"
+          }
+        ]
       }
     },
     "schemas": {
@@ -99,16 +112,24 @@
           "properties": {
             "specversion": {
               "type": "string",
-              "enum": ["1.0"]
+              "enum": [
+                "1.0"
+              ]
             },
             "type": {
               "description": "Type of occurrence which has happened. Often this property is used for routing, observability, policy enforcement, etc.",
               "type": "string",
               "minLength": 1
             },
-            "source": { "type": "string" },
-            "subject": { "type": "string" },
-            "id": { "type": "string" },
+            "source": {
+              "type": "string"
+            },
+            "subject": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
             "time": {
               "type": "string",
               "format": "date-time"
@@ -119,7 +140,12 @@
               "const": "application/json"
             }
           },
-          "required": ["id", "specversion", "source", "type"]
+          "required": [
+            "id",
+            "specversion",
+            "source",
+            "type"
+          ]
         }
       }
     }

@@ -313,8 +313,9 @@ class MaintenanceAgent:
                     machine_id = work_order.get("equipment_id")
                     
                     # Remove from pending since work order is created
-                    if machine_id in self.pending_notifications:
-                        del self.pending_notifications[machine_id]
+                    ns = arguments.get("namespace", "")
+                    key = f"{ns}:{machine_id}"
+                    self.pending_notifications.pop(key, None)
                     
                     console.print(f"     [bold green]📋 PM Work Order: {wo_id} created from notification {notif_id}[/bold green]")
             
@@ -354,6 +355,10 @@ class MaintenanceAgent:
         """Run a single maintenance check cycle for a specific namespace (SE)."""
         self.cycle_count += 1
         
+        # Compute pending notifications for THIS namespace
+        ns_pending = {k.split(":", 1)[1]: v for k, v in self.pending_notifications.items()
+                      if k.startswith(f"{namespace}:")}
+        
         # Display cycle header
         table = Table(show_header=False, box=box.SIMPLE)
         table.add_column("Info", style="cyan")
@@ -367,9 +372,6 @@ class MaintenanceAgent:
         console.print(Panel(table, title=f"🔄 SAP PM Cycle [{namespace}]", border_style="blue"))
         
         # Build context about pending notifications for the LLM
-        # Only show pending notifications for THIS namespace
-        ns_pending = {k.split(":", 1)[1]: v for k, v in self.pending_notifications.items()
-                      if k.startswith(f"{namespace}:")}
         pending_context = ""
         if ns_pending:
             pending_list = ", ".join([f"{mid} (Notif: {n.get('notification_id')})" 

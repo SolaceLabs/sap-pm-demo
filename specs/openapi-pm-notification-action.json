@@ -3,7 +3,7 @@
   "info": {
     "title": "PM Notification Approval API",
     "description": "API for SAP Build BPA to publish PM Notification approval or rejection events to SAP Advanced Event Mesh (AEM) via REST. Use this action in your BPA workflow to notify the maintenance agent of the approval decision.",
-    "version": "1.0.0"
+    "version": "2.0.0"
   },
   "servers": [
     {
@@ -22,13 +22,25 @@
     }
   ],
   "paths": {
-    "/factory/line-A/{machineId}/notification/approved": {
+    "/factory/{seName}/{machineId}/notification/approved": {
       "post": {
         "operationId": "publishNotificationApproved",
         "summary": "Publish PM Notification Approved Event",
         "description": "Publish an approval event to AEM when a PM Notification is approved in BPA workflow. The maintenance agent will receive this event and create a PM Work Order.",
-        "tags": ["PM Notification"],
+        "tags": [
+          "PM Notification"
+        ],
         "parameters": [
+          {
+            "name": "seName",
+            "in": "path",
+            "required": true,
+            "description": "The SE/demo session name (e.g. sumeet, giuseppe). Must match the name entered on the dashboard.",
+            "schema": {
+              "type": "string",
+              "example": "sumeet"
+            }
+          },
           {
             "name": "machineId",
             "in": "path",
@@ -105,13 +117,25 @@
         }
       }
     },
-    "/factory/line-A/{machineId}/notification/rejected": {
+    "/factory/{seName}/{machineId}/notification/rejected": {
       "post": {
         "operationId": "publishNotificationRejected",
         "summary": "Publish PM Notification Rejected Event",
         "description": "Publish a rejection event to AEM when a PM Notification is rejected in BPA workflow. The maintenance agent will receive this event and log the rejection.",
-        "tags": ["PM Notification"],
+        "tags": [
+          "PM Notification"
+        ],
         "parameters": [
+          {
+            "name": "seName",
+            "in": "path",
+            "required": true,
+            "description": "The SE/demo session name (e.g. sumeet, giuseppe). Must match the name entered on the dashboard.",
+            "schema": {
+              "type": "string",
+              "example": "sumeet"
+            }
+          },
           {
             "name": "machineId",
             "in": "path",
@@ -215,7 +239,9 @@
           },
           "status": {
             "type": "string",
-            "enum": ["approved"],
+            "enum": [
+              "approved"
+            ],
             "description": "Approval status - must be 'approved'",
             "example": "approved"
           },
@@ -270,7 +296,9 @@
           },
           "status": {
             "type": "string",
-            "enum": ["rejected"],
+            "enum": [
+              "rejected"
+            ],
             "description": "Rejection status - must be 'rejected'",
             "example": "rejected"
           },

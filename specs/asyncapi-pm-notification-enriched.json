@@ -2,18 +2,27 @@
   "asyncapi": "2.0.0",
   "info": {
     "title": "PM Notification Enriched - Agent Mesh Briefing",
-    "version": "1.0",
+    "version": "2.0.0",
     "description": "This event is published by the Solace Agent Mesh after enriching a PM Notification with cross-functional intelligence. The notification arrives at BPA with a complete decision package: maintenance diagnosis, SAP MM parts availability, SAP HR technician assignment, and SAP CO financial impact. The BPA approver makes an informed decision in seconds rather than gathering data from multiple SAP modules manually."
   },
   "x-api-type": "EVENT",
   "x-shortText": "Notifies BPA when a PM Notification has been enriched with agent mesh decision briefing.",
-  "x-stateInfo": { "state": "ACTIVE" },
+  "x-stateInfo": {
+    "state": "ACTIVE"
+  },
   "channels": {
-    "factory/line-A/{machineId}/notification/enriched": {
+    "factory/{seName}/{machineId}/notification/enriched": {
       "parameters": {
         "machineId": {
           "schema": {
             "type": "string"
+          }
+        },
+        "seName": {
+          "description": "The SE/demo session name (e.g. sumeet, giuseppe). Isolates each demo session.",
+          "schema": {
+            "type": "string",
+            "example": "sumeet"
           }
         }
       },
@@ -43,7 +52,11 @@
         "payload": {
           "$ref": "#/components/schemas/pmNotificationEnriched"
         },
-        "traits": [{ "$ref": "#/components/messageTraits/CloudEventContext" }]
+        "traits": [
+          {
+            "$ref": "#/components/messageTraits/CloudEventContext"
+          }
+        ]
       }
     },
     "schemas": {
@@ -116,12 +129,10 @@
             "maxLength": 4,
             "description": "SAP Planning Plant code"
           },
-
           "agent_briefing": {
             "type": "object",
             "description": "Cross-functional decision briefing produced by the agent mesh in parallel after the notification was created.",
             "properties": {
-
               "diagnosis": {
                 "type": "object",
                 "description": "Technical diagnosis from the Maintenance Agent.",
@@ -162,7 +173,6 @@
                   }
                 }
               },
-
               "parts_availability": {
                 "type": "object",
                 "description": "Materials Management lookup from the Supply Chain Agent. Maps to SAP MM.",
@@ -216,7 +226,6 @@
                   }
                 }
               },
-
               "technician_assignment": {
                 "type": "object",
                 "description": "Workforce lookup from the Workforce Agent. Maps to SAP HR / SuccessFactors.",
@@ -264,7 +273,6 @@
                   }
                 }
               },
-
               "financial_impact": {
                 "type": "object",
                 "description": "Cost analysis from the Finance Agent. Maps to SAP CO.",
@@ -324,7 +332,6 @@
                   }
                 }
               },
-
               "synthesis": {
                 "type": "object",
                 "description": "Final recommendation synthesized by the Orchestrator Agent from all specialist agents.",
@@ -350,7 +357,6 @@
                   }
                 }
               },
-
               "audit": {
                 "type": "object",
                 "description": "Audit trail metadata for compliance and explainability.",
@@ -401,16 +407,24 @@
           "properties": {
             "specversion": {
               "type": "string",
-              "enum": ["1.0"]
+              "enum": [
+                "1.0"
+              ]
             },
             "type": {
               "description": "Type of occurrence which has happened. Often this property is used for routing, observability, policy enforcement, etc.",
               "type": "string",
               "minLength": 1
             },
-            "source": { "type": "string" },
-            "subject": { "type": "string" },
-            "id": { "type": "string" },
+            "source": {
+              "type": "string"
+            },
+            "subject": {
+              "type": "string"
+            },
+            "id": {
+              "type": "string"
+            },
             "time": {
               "type": "string",
               "format": "date-time"
@@ -421,7 +435,12 @@
               "const": "application/json"
             }
           },
-          "required": ["id", "specversion", "source", "type"]
+          "required": [
+            "id",
+            "specversion",
+            "source",
+            "type"
+          ]
         }
       }
     }

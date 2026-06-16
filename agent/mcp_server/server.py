@@ -545,6 +545,22 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
                     )]
                 result = {mid: list(buf)[-1] for mid, buf in ns_data.items() if buf}
 
+        # Include notification statuses so the LLM always knows which need work orders
+        # (this is the bulletproof fallback - even if get_notification_events misses an approval,
+        # the LLM sees it here every cycle)
+        with notifications_lock:
+            ns_notifs = notifications.get(namespace, {})
+            if ns_notifs:
+                notif_summary = {}
+                for nid, notif in ns_notifs.items():
+                    notif_summary[nid] = {
+                        "status": notif.get("status", "PENDING"),
+                        "equipment_id": notif.get("equipment_id"),
+                        "notification_type": notif.get("notification_type"),
+                        "has_work_order": bool(notif.get("work_order_id")),
+                    }
+                result["_notification_statuses"] = notif_summary
+
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]
 
     # ── get_sensor_history ────────────────────────────────────────────────────

@@ -179,7 +179,9 @@ Remember: You are autonomous. Create notifications and work orders following the
 
 IMPORTANT: If get_sensor_readings returns status "DEMO_NOT_ACTIVE", the demo has not been started by the presenter yet. In this case, respond with a brief "Demo not active, standing by" message and END your turn immediately. Do NOT call any other tools. Do NOT create any notifications. Just wait.
 
-CRITICAL: You will be told which namespace (SE name) you are monitoring. ALWAYS pass that namespace in EVERY tool call as the 'namespace' parameter. For example: get_sensor_readings(namespace="sumeet"), create_notification(namespace="sumeet", ...)."""
+CRITICAL: You will be told which namespace (SE name) you are monitoring. ALWAYS pass that namespace in EVERY tool call as the 'namespace' parameter. For example: get_sensor_readings(namespace="sumeet"), create_notification(namespace="sumeet", ...).
+
+IMPORTANT: The get_sensor_readings response includes a '_notification_statuses' section showing the current status of all notifications. If any notification has status 'approved' and has_work_order=false, you MUST immediately create a work order for it using create_workorder. Do NOT skip this. The BPA has approved the notification and a work order is expected."""
 
 
 class MaintenanceAgent:

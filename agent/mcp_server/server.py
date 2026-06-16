@@ -759,22 +759,51 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
     # ── get_notification_events ───────────────────────────────────────────────
     elif name == "get_notification_events":
-        machine_id = arguments.get("machine_id")
-        mark_processed = arguments.get("mark_processed", True)
+        namespace         = arguments.get("namespace", "")
+        machine_id_filter = arguments.get("machine_id")
+        mark_processed    = arguments.get("mark_processed", True)
         
+        # Primary: check the events queue
         with events_lock:
-            pending_events = [
-                e for e in notification_events 
-                if not e["processed"] and (not machine_id or e["machine_id"] == machine_id)
+            matching = [
+                e for e in notification_events
+                if not e["processed"]
+                and e.get("namespace", "") == namespace
+                and (not machine_id_filter or e.get("machine_id") == machine_id_filter)
             ]
             
             if mark_processed:
-                for event in pending_events:
+                for event in matching:
                     event["processed"] = True
         
+        # Fallback: also scan the notifications dict for approved/rejected
+        # notifications that don't have work orders yet (catches cases where
+        # the event-based approach missed the approval, e.g. protocol bridging gaps)
+        with notifications_lock:
+            ns_notifs = notifications.get(namespace, {})
+            for nid, notif in ns_notifs.items():
+                status = notif.get("status", "")
+                if status in ("approved", "rejected") and not notif.get("work_order_id"):
+                    # Check if we already have this in the matching events
+                    already_found = any(e.get("notification_id") == nid for e in matching)
+                    if not already_found:
+                        synthetic_event = {
+                            "event_id": f"SYNTH-{uuid.uuid4().hex[:8].upper()}",
+                            "event_type": status,
+                            "namespace": namespace,
+                            "machine_id": notif.get("equipment_id", "unknown"),
+                            "notification_id": nid,
+                            "payload": notif,
+                            "received_at": datetime.now(timezone.utc).isoformat(),
+                            "processed": True,
+                            "source": "notifications_dict_fallback",
+                        }
+                        matching.append(synthetic_event)
+                        log.info("[%s] Fallback: found %s notification %s in dict", namespace, status, nid)
+        
         result = {
-            "events_count": len(pending_events),
-            "events": pending_events,
+            "events_count": len(matching),
+            "events": matching,
         }
         
         return [types.TextContent(type="text", text=json.dumps(result, indent=2))]

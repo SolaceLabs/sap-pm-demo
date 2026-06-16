@@ -60,9 +60,8 @@ HISTORY_MAXLEN   = 50
 # Topics (wildcard for multi-tenant)
 SUBSCRIBE_TOPIC  = "factory/+/+/sensors"
 
-# Topics for notification events (agent subscribes to these)
-NOTIFICATION_APPROVED_TOPIC = "factory/+/+/notification/approved"
-NOTIFICATION_REJECTED_TOPIC = "factory/+/+/notification/rejected"
+# Topics for notification events (covers approved, rejected, pending - all in one sub)
+NOTIFICATION_EVENTS_TOPIC = "factory/+/+/notification/+"
 CONTROL_TOPIC = "factory/+/control/+/+"
 
 # CloudEvents configuration
@@ -102,14 +101,16 @@ def _on_connect(client, userdata, flags, rc, properties=None):
         # Subscribe to sensor data
         client.subscribe(SUBSCRIBE_TOPIC, qos=0)
         log.info("Subscribed to %s", SUBSCRIBE_TOPIC)
-        # Subscribe to notification approval/rejection events from BPA
-        client.subscribe(NOTIFICATION_APPROVED_TOPIC, qos=0)
-        client.subscribe(NOTIFICATION_REJECTED_TOPIC, qos=0)
-        log.info("Subscribed to notification events: %s, %s", 
-                 NOTIFICATION_APPROVED_TOPIC, NOTIFICATION_REJECTED_TOPIC)
+        # Subscribe to notification events (approved/rejected/pending) from BPA
+        client.subscribe(NOTIFICATION_EVENTS_TOPIC, qos=0)
+        log.info("Subscribed to notification events: %s", NOTIFICATION_EVENTS_TOPIC)
         # Subscribe to demo control events to track demo state
         client.subscribe(CONTROL_TOPIC, qos=0)
         log.info("Subscribed to control events: %s", CONTROL_TOPIC)
+        # Catch-all: ensures we receive BPA REST-published approvals regardless of
+        # wildcard pattern matching quirks between Solace REST and MQTT protocols
+        client.subscribe("factory/#", qos=0)
+        log.info("Subscribed to catch-all: factory/#")
     else:
         log.error("MQTT connection failed — rc=%s", rc)
 

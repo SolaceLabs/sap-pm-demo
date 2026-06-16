@@ -174,7 +174,7 @@ def broadcast_state(client, namespace, session):
 def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
         log.info("Connected to Solace broker at %s:%s", SOLACE_HOST, SOLACE_PORT)
-        client.subscribe(CONTROL_SUBSCRIBE_TOPIC, qos=1)
+        client.subscribe(CONTROL_SUBSCRIBE_TOPIC, qos=0)
         log.info("Subscribed: %s (multi-tenant wildcard)", CONTROL_SUBSCRIBE_TOPIC)
     else:
         log.error("Connection failed: rc=%s", rc)

@@ -2085,7 +2085,7 @@
         const message = solace.SolclientFactory.createMessage();
         message.setDestination(solace.SolclientFactory.createTopicDestination(topic));
         message.setBinaryAttachment(JSON.stringify(payload));
-        message.setDeliveryMode(solace.MessageDeliveryModeType.PERSISTENT);
+        message.setDeliveryMode(solace.MessageDeliveryModeType.DIRECT);
         session.send(message);
         log('info', `📤 Sent: ${category}/${action}`);
         return true;
@@ -2257,7 +2257,7 @@
         const message = solace.SolclientFactory.createMessage();
         message.setDestination(solace.SolclientFactory.createTopicDestination(topic));
         message.setBinaryAttachment(JSON.stringify(payload));
-        message.setDeliveryMode(solace.MessageDeliveryModeType.PERSISTENT);
+        message.setDeliveryMode(solace.MessageDeliveryModeType.DIRECT);
         session.send(message);
         return true;
       } catch (error) {

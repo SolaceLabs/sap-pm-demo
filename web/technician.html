@@ -605,7 +605,7 @@
         const msg = solace.SolclientFactory.createMessage();
         msg.setDestination(solace.SolclientFactory.createTopicDestination(topic));
         msg.setBinaryAttachment(JSON.stringify(payload));
-        msg.setDeliveryMode(solace.MessageDeliveryModeType.PERSISTENT);
+        msg.setDeliveryMode(solace.MessageDeliveryModeType.DIRECT);
         session.send(msg);
         inPool = true;
         showState('standby');

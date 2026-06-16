@@ -100,15 +100,15 @@ def _on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
         log.info("Connected to Solace broker at %s:%s", SOLACE_HOST, SOLACE_PORT)
         # Subscribe to sensor data
-        client.subscribe(SUBSCRIBE_TOPIC, qos=1)
+        client.subscribe(SUBSCRIBE_TOPIC, qos=0)
         log.info("Subscribed to %s", SUBSCRIBE_TOPIC)
         # Subscribe to notification approval/rejection events from BPA
-        client.subscribe(NOTIFICATION_APPROVED_TOPIC, qos=1)
-        client.subscribe(NOTIFICATION_REJECTED_TOPIC, qos=1)
+        client.subscribe(NOTIFICATION_APPROVED_TOPIC, qos=0)
+        client.subscribe(NOTIFICATION_REJECTED_TOPIC, qos=0)
         log.info("Subscribed to notification events: %s, %s", 
                  NOTIFICATION_APPROVED_TOPIC, NOTIFICATION_REJECTED_TOPIC)
         # Subscribe to demo control events to track demo state
-        client.subscribe(CONTROL_TOPIC, qos=1)
+        client.subscribe(CONTROL_TOPIC, qos=0)
         log.info("Subscribed to control events: %s", CONTROL_TOPIC)
     else:
         log.error("MQTT connection failed — rc=%s", rc)
@@ -238,7 +238,7 @@ def publish_to_aem(topic: str, payload: dict) -> bool:
         return False
     
     try:
-        result = mqtt_client.publish(topic, json.dumps(payload), qos=1)
+        result = mqtt_client.publish(topic, json.dumps(payload), qos=0)
         result.wait_for_publish(timeout=5.0)
         log.info("Published to %s", topic)
         return True

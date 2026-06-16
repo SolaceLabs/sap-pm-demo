@@ -490,10 +490,23 @@ class MaintenanceAgent:
         console.print(f"[dim]Starting SAP PM maintenance loop (checking every {CHECK_INTERVAL}s)...[/dim]\n")
         
         try:
+            previous_namespaces = set()
             while self.running:
                 try:
                     # Discover active namespaces
                     namespaces = await self.discover_namespaces()
+                    
+                    # Clear pending_notifications for freshly activated namespaces
+                    # (handles stop → re-start: MCP server cleared its state, agent should too)
+                    for ns in namespaces:
+                        if ns not in previous_namespaces:
+                            stale_keys = [k for k in self.pending_notifications if k.startswith(f"{ns}:")]
+                            if stale_keys:
+                                for k in stale_keys:
+                                    del self.pending_notifications[k]
+                                console.print(f"[yellow]Cleared {len(stale_keys)} stale pending notifications for '{ns}' (fresh session)[/yellow]")
+                    previous_namespaces = set(namespaces)
+                    
                     if namespaces:
                         console.print(f"[bold cyan]Active namespaces: {', '.join(namespaces)}[/bold cyan]")
                         for ns in namespaces:

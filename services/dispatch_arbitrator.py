@@ -89,7 +89,7 @@ def publish(client, topic, payload):
     if client is None or not client.is_connected():
         return
     try:
-        client.publish(topic, json.dumps(payload), qos=1)
+        client.publish(topic, json.dumps(payload), qos=0)
     except Exception as exc:
         log.error("Publish failed %s: %s", topic, exc)
 
@@ -199,7 +199,7 @@ def on_connect(client, userdata, flags, rc, properties=None):
     if rc == 0:
         log.info("Connected to Solace broker at %s:%s", SOLACE_HOST, SOLACE_PORT)
         for topic in SUBSCRIBE_TOPICS:
-            client.subscribe(topic, qos=1)
+            client.subscribe(topic, qos=0)
             log.info("Subscribed: %s", topic)
     else:
         log.error("Connection failed: rc=%s", rc)

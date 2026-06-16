@@ -668,6 +668,7 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
 
     # ── create_workorder ──────────────────────────────────────────────────────
     elif name == "create_workorder":
+        namespace = arguments.get("namespace", "")
         required = ["notification_id", "equipment_id", "order_type", "priority", "short_text"]
         missing  = [f for f in required if not arguments.get(f)]
         if missing:
@@ -682,9 +683,11 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> list[types.TextCont
         
         # Verify notification exists and is approved
         with notifications_lock:
-            notification = notifications.get(notification_id)
-            if notification and notification.get("status") != "approved":
-                log.warning("Attempting to create work order for non-approved notification: %s", notification_id)
+            ns_notifs = notifications.get(namespace, {})
+            notification = ns_notifs.get(notification_id)
+            if notification and notification.get("status") not in ("approved", "PENDING"):
+                log.warning("Attempting to create work order for non-approved notification: %s (status=%s)",
+                           notification_id, notification.get("status"))
         
         # Generate SAP-style work order number (12 digits)
         workorder_id = f"40{uuid.uuid4().hex[:10].upper()}"

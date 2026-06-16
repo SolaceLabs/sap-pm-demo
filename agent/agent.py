@@ -195,7 +195,7 @@ class MaintenanceAgent:
         self.notifications_rejected = 0
         self.workorders_created = 0
         # Track pending notifications to avoid duplicates
-        self.pending_notifications: dict[str, dict] = {}  # machine_id -> notification
+        self.pending_notifications: dict[str, dict] = {}  # (namespace:machine_id) -> notification
 
     async def connect_to_mcp(self) -> None:
         """Establish connection to the MCP server and discover tools."""
@@ -296,7 +296,8 @@ class MaintenanceAgent:
                     machine_id = notification.get("equipment_id")
                     notif_id = notification.get("notification_id")
                     notif_type = notification.get("notification_type")
-                    self.pending_notifications[machine_id] = notification
+                    ns = arguments.get("namespace", "")
+                    self.pending_notifications[f"{ns}:{machine_id}"] = notification
                     
                     if notif_type == "M1":
                         console.print(f"     [bold red]🚨 PM Notification (M1 - Malfunction): {notif_id} for {machine_id}[/bold red]")
@@ -331,8 +332,9 @@ class MaintenanceAgent:
                     elif event_type == "rejected":
                         self.notifications_rejected += 1
                         # Remove from pending
-                        if machine_id in self.pending_notifications:
-                            del self.pending_notifications[machine_id]
+                        ns = arguments.get("namespace", "")
+                        key = f"{ns}:{machine_id}"
+                        self.pending_notifications.pop(key, None)
                         console.print(f"     [bold red]❌ Notification {notif_id} REJECTED for {machine_id}[/bold red]")
         
         except json.JSONDecodeError:
@@ -360,15 +362,18 @@ class MaintenanceAgent:
         table.add_row("Namespace", namespace)
         table.add_row("Time", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         table.add_row("Model", LLM_MODEL)
-        table.add_row("Pending Notifications", str(len(self.pending_notifications)))
+        table.add_row("Pending Notifications", str(len(ns_pending)))
         
         console.print(Panel(table, title=f"🔄 SAP PM Cycle [{namespace}]", border_style="blue"))
         
         # Build context about pending notifications for the LLM
+        # Only show pending notifications for THIS namespace
+        ns_pending = {k.split(":", 1)[1]: v for k, v in self.pending_notifications.items()
+                      if k.startswith(f"{namespace}:")}
         pending_context = ""
-        if self.pending_notifications:
+        if ns_pending:
             pending_list = ", ".join([f"{mid} (Notif: {n.get('notification_id')})" 
-                                      for mid, n in self.pending_notifications.items()])
+                                      for mid, n in ns_pending.items()])
             pending_context = f"\n\nNOTE: There are pending PM notifications awaiting BPA approval for: {pending_list}. Do NOT create duplicate notifications for these machines."
         
         messages = [

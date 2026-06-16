@@ -1868,17 +1868,19 @@
     // Read demo slot from URL params or prompt for name
     let DEMO_SLOT = new URLSearchParams(window.location.search).get('slot') || '';
 
-    // Topics to subscribe to (parameterized by DEMO_SLOT)
-    const TOPICS = [
-      `factory/${DEMO_SLOT}/*/sensors`,              // Sensor data from simulator
-      `factory/${DEMO_SLOT}/*/notification/pending`, // PM Notifications from agent
-      `factory/${DEMO_SLOT}/*/notification/approved`,// Approvals from BPA
-      `factory/${DEMO_SLOT}/*/notification/rejected`,// Rejections from BPA
-      `factory/${DEMO_SLOT}/*/workorder/created`,    // Work orders from agent
-      `factory/${DEMO_SLOT}/control/demo/state`,     // Demo state broadcasts from simulator
-      `factory/${DEMO_SLOT}/dispatch/pool-update`,   // Pool size updates from arbitrator
-      `factory/${DEMO_SLOT}/dispatch/assignment`      // Winner announcement from arbitrator
-    ];
+    // Topics built dynamically so they use the current DEMO_SLOT value
+    function getTopics() {
+      return [
+        `factory/${DEMO_SLOT}/*/sensors`,
+        `factory/${DEMO_SLOT}/*/notification/pending`,
+        `factory/${DEMO_SLOT}/*/notification/approved`,
+        `factory/${DEMO_SLOT}/*/notification/rejected`,
+        `factory/${DEMO_SLOT}/*/workorder/created`,
+        `factory/${DEMO_SLOT}/control/demo/state`,
+        `factory/${DEMO_SLOT}/dispatch/pool-update`,
+        `factory/${DEMO_SLOT}/dispatch/assignment`
+      ];
+    }
 
     // ============================================================
     // State
@@ -2480,7 +2482,7 @@
     }
 
     function subscribeToTopics() {
-      TOPICS.forEach(topic => {
+      getTopics().forEach(topic => {
         try {
           const topicObj = solace.SolclientFactory.createTopicDestination(topic);
           session.subscribe(topicObj, true, topic, 10000);
